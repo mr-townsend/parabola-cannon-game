@@ -51,20 +51,15 @@
         
         .toggle-checkbox:checked { background-color: #3b82f6; border-color: #3b82f6; }
 
-        /* Heart Animation */
-        @keyframes heartbeat {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-        }
-        .heart-icon { color: #ef4444; display: inline-block; transition: all 0.3s; }
-        .heart-lost { color: #94a3b8; transform: scale(0.8); opacity: 0.5; }
+        .heart-icon { display: inline-block; transition: all 0.3s; }
+        .heart-lost { color: #475569 !important; transform: scale(0.8); opacity: 0.5; }
         
-        .disabled-control { opacity: 0.5; pointer-events: none; filter: grayscale(100%); }
+        .disabled-control { opacity: 0.6; pointer-events: none; filter: grayscale(100%); background: #1e293b; }
     </style>
 </head>
 <body class="h-full w-full flex bg-slate-900">
 
-    <!-- MODE SELECTION OVERLAY -->
+    <!-- MODE SELECTION -->
     <div id="modeSelectScreen" class="absolute inset-0 z-[60] bg-slate-900 flex flex-col items-center justify-center p-4">
         <div class="max-w-5xl w-full grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="md:col-span-3 text-center mb-4">
@@ -72,28 +67,22 @@
                 <p class="text-slate-400 text-lg">Select Tactical Mode</p>
             </div>
             
-            <!-- SOLO -->
             <button onclick="startGame('practice')" class="group relative overflow-hidden rounded-3xl bg-slate-800 border-2 border-slate-700 hover:border-blue-500 transition-all duration-300 p-6 text-left hover:shadow-[0_0_30px_rgba(59,130,246,0.3)]">
-                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><svg class="w-24 h-24 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div>
                 <h2 class="text-2xl font-bold text-white mb-2 group-hover:text-blue-400">Solo Mission</h2>
                 <p class="text-slate-400 text-sm mb-6">Target practice. Master coordinate geometry against static targets.</p>
-                <span class="inline-block bg-blue-600/20 text-blue-400 font-bold py-2 px-4 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors text-sm">Start Practice</span>
+                <span class="inline-block bg-blue-600/20 text-blue-400 font-bold py-2 px-4 rounded-lg">Start Practice</span>
             </button>
 
-            <!-- VS COMPUTER -->
             <button onclick="startGame('computer')" class="group relative overflow-hidden rounded-3xl bg-slate-800 border-2 border-slate-700 hover:border-amber-500 transition-all duration-300 p-6 text-left hover:shadow-[0_0_30px_rgba(245,158,11,0.3)]">
-                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><svg class="w-24 h-24 text-amber-500" fill="currentColor" viewBox="0 0 24 24"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H3V4h18v12z"/><path d="M10 15l5-3-5-3v6z"/></svg></div>
                 <h2 class="text-2xl font-bold text-white mb-2 group-hover:text-amber-400">Vs Computer</h2>
                 <p class="text-slate-400 text-sm mb-6">Survival mode. The AI relocates and fires back. 3 Hearts each.</p>
-                <span class="inline-block bg-amber-600/20 text-amber-400 font-bold py-2 px-4 rounded-lg group-hover:bg-amber-600 group-hover:text-white transition-colors text-sm">Battle AI</span>
+                <span class="inline-block bg-amber-600/20 text-amber-400 font-bold py-2 px-4 rounded-lg">Battle AI</span>
             </button>
 
-            <!-- 1V1 DUEL -->
             <button onclick="startGame('versus')" class="group relative overflow-hidden rounded-3xl bg-slate-800 border-2 border-slate-700 hover:border-red-500 transition-all duration-300 p-6 text-left hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]">
-                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><svg class="w-24 h-24 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M14.5 17c0 1.65-1.35 3-3 3s-3-1.35-3-3 1.35-3 3-3 3 1.35 3 3zm8.5 0c0 1.65-1.35 3-3 3s-3-1.35-3-3 1.35-3 3-3 3 1.35 3 3zm-13-7c0 1.65-1.35 3-3 3s-3-1.35-3-3 1.35-3 3-3 3 1.35 3 3zm13 0c0 1.65-1.35 3-3 3s-3-1.35-3-3 1.35-3 3-3 3 1.35 3 3z"/></svg></div>
                 <h2 class="text-2xl font-bold text-white mb-2 group-hover:text-red-400">1v1 Duel</h2>
-                <p class="text-slate-400 text-sm mb-6">Hotseat mode. Take turns on same device. First to 5 points.</p>
-                <span class="inline-block bg-red-600/20 text-red-400 font-bold py-2 px-4 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-colors text-sm">Start Duel</span>
+                <p class="text-slate-400 text-sm mb-6">Hotseat mode. Take turns on same device. 5 Hearts each.</p>
+                <span class="inline-block bg-red-600/20 text-red-400 font-bold py-2 px-4 rounded-lg">Start Duel</span>
             </button>
         </div>
     </div>
@@ -103,41 +92,32 @@
         <div class="max-w-md w-full bg-slate-800 p-8 rounded-3xl border-4 text-center transform transition-all" id="winCard">
             <h2 class="text-4xl font-bold text-white mb-2" id="winTitle">GAME OVER</h2>
             <p class="text-xl text-slate-400 mb-8" id="winSub">Player X Wins!</p>
-            <button onclick="resetGame()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg text-lg">
-                REMATCH
-            </button>
-            <button onclick="location.reload()" class="mt-4 w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-3 rounded-xl transition-all">
-                Main Menu
-            </button>
+            <button onclick="resetGame()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg text-lg">REMATCH</button>
+            <button onclick="location.reload()" class="mt-4 w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-3 rounded-xl transition-all">Main Menu</button>
         </div>
     </div>
 
     <!-- MAIN GAME LAYOUT -->
     <div class="flex-grow flex flex-col h-full min-w-0">
-        
-        <!-- Game Canvas Container -->
         <div class="relative flex-grow bg-slate-900 overflow-hidden">
             <!-- Top HUD -->
-            <div class="absolute top-4 left-4 pointer-events-none z-10 flex gap-4 w-full pr-8">
+            <div class="absolute top-4 left-4 pointer-events-none z-10 flex gap-4 w-full pr-8 items-start">
                 <div class="glass-panel px-4 py-2 rounded-xl shadow-lg flex-shrink-0">
                     <h1 class="text-lg font-bold text-slate-800">PARABOLA CANNON</h1>
                     <p id="modeBadge" class="text-[10px] text-blue-600 font-bold uppercase">Solo Mission</p>
                 </div>
-                <!-- Turn Indicator -->
                 <div id="turnIndicator" class="hidden glass-panel px-4 py-2 rounded-xl shadow-lg border-l-4 border-blue-500 transition-colors flex-shrink-0">
                     <h2 id="turnText" class="text-lg font-bold text-slate-800">Player 1 Turn</h2>
                 </div>
                 
-                <!-- Health Displays (Computer Mode) -->
-                <div id="healthWrapper" class="hidden flex gap-4 ml-auto">
-                    <!-- Player Health -->
+                <!-- Health Displays -->
+                <div id="healthWrapper" class="hidden flex gap-4 ml-auto pointer-events-auto">
                     <div class="glass-panel px-4 py-2 rounded-xl shadow-lg flex items-center gap-2">
-                        <span class="text-[10px] text-blue-600 font-bold uppercase mr-1">YOU</span>
+                        <span id="p1HealthLabel" class="text-[10px] text-blue-600 font-bold uppercase mr-1">YOU</span>
                         <div id="heartsContainer" class="flex gap-1 text-xl"></div>
                     </div>
-                    <!-- Enemy Health -->
-                    <div class="glass-panel px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 border-l-4 border-amber-500">
-                        <span class="text-[10px] text-amber-600 font-bold uppercase mr-1">ENEMY</span>
+                    <div class="glass-panel px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 border-l-4 border-amber-500" id="p2HealthPanel">
+                        <span id="p2HealthLabel" class="text-[10px] text-amber-600 font-bold uppercase mr-1">ENEMY</span>
                         <div id="enemyHeartsContainer" class="flex gap-1 text-xl"></div>
                     </div>
                 </div>
@@ -146,7 +126,7 @@
             <!-- Game Canvas -->
             <canvas id="gameCanvas" class="w-full h-full cursor-crosshair block"></canvas>
             
-            <!-- Instructions Overlay -->
+            <!-- Instructions -->
             <div id="instructions" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div class="bg-white max-w-lg w-full p-8 rounded-2xl text-center shadow-2xl border border-slate-200">
                     <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">📐</div>
@@ -166,9 +146,9 @@
                 <div id="cannonControlGroup" class="flex flex-col relative border-r border-slate-600 pr-6 mr-2 transition-opacity">
                     <label class="text-[10px] text-blue-400 font-bold uppercase mb-1 ml-1" id="cannonXLabel">Cannon X</label>
                     <div class="flex items-center input-glow bg-slate-900 rounded-lg border-2 border-slate-600 overflow-hidden">
-                        <button class="px-2 py-2 text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-r border-slate-600 transition-colors" onclick="stepInput('inputCannonX', -1)">-</button>
+                        <button class="w-12 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-r border-slate-600 transition-colors text-xl font-bold" onclick="stepInput('inputCannonX', -1)">-</button>
                         <input type="number" id="inputCannonX" placeholder="0" value="0" class="w-14 bg-transparent text-center text-lg font-bold text-white placeholder-slate-600 appearance-none border-none outline-none">
-                        <button class="px-2 py-2 text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-l border-slate-600 transition-colors" onclick="stepInput('inputCannonX', 1)">+</button>
+                        <button class="w-12 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-l border-slate-600 transition-colors text-xl font-bold" onclick="stepInput('inputCannonX', 1)">+</button>
                     </div>
                 </div>
 
@@ -177,18 +157,18 @@
                     <div class="flex flex-col relative">
                         <label class="text-[10px] text-slate-400 font-bold uppercase mb-1 ml-1">Target X</label>
                         <div class="flex items-center input-glow bg-slate-900 rounded-lg border-2 border-slate-600 overflow-hidden">
-                            <button class="px-2 py-2 text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-r border-slate-600 transition-colors" onclick="stepInput('inputX', -1)">-</button>
+                            <button class="w-12 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-r border-slate-600 transition-colors text-xl font-bold" onclick="stepInput('inputX', -1)">-</button>
                             <input type="number" id="inputX" placeholder="0" value="0" class="w-16 bg-transparent text-center text-lg font-bold text-white placeholder-slate-600 appearance-none border-none outline-none">
-                            <button class="px-2 py-2 text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-l border-slate-600 transition-colors" onclick="stepInput('inputX', 1)">+</button>
+                            <button class="w-12 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-l border-slate-600 transition-colors text-xl font-bold" onclick="stepInput('inputX', 1)">+</button>
                         </div>
                     </div>
                     
                     <div class="flex flex-col relative">
                         <label id="labelY" class="text-[10px] text-slate-400 font-bold uppercase mb-1 ml-1">Peak Height (k)</label>
                         <div class="flex items-center input-glow bg-slate-900 rounded-lg border-2 border-slate-600 overflow-hidden">
-                            <button class="px-2 py-2 text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-r border-slate-600 transition-colors" onclick="stepInput('inputY', -1)">-</button>
+                            <button class="w-12 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-r border-slate-600 transition-colors text-xl font-bold" onclick="stepInput('inputY', -1)">-</button>
                             <input type="number" id="inputY" placeholder="0" value="0" class="w-16 bg-transparent text-center text-lg font-bold text-white placeholder-slate-600 appearance-none border-none outline-none">
-                            <button class="px-2 py-2 text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-l border-slate-600 transition-colors" onclick="stepInput('inputY', 1)">+</button>
+                            <button class="w-12 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-l border-slate-600 transition-colors text-xl font-bold" onclick="stepInput('inputY', 1)">+</button>
                         </div>
                     </div>
                 </div>
@@ -199,27 +179,27 @@
                     <div class="flex flex-col relative">
                          <label class="text-[8px] text-emerald-400 absolute -top-3 left-1">a</label>
                          <div class="flex items-center input-glow bg-slate-900 rounded-lg border-2 border-slate-600 overflow-hidden">
-                            <button class="px-1 py-1 text-slate-400 hover:text-white hover:bg-slate-700 text-xs border-r border-slate-600" onclick="stepInput('inputA', -0.05)">-</button>
+                            <button class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 text-sm border-r border-slate-600" onclick="stepInput('inputA', -0.05)">-</button>
                             <input type="number" id="inputA" placeholder="-0.1" class="w-14 bg-transparent text-center text-sm font-bold text-white placeholder-slate-600 appearance-none border-none outline-none">
-                            <button class="px-1 py-1 text-slate-400 hover:text-white hover:bg-slate-700 text-xs border-l border-slate-600" onclick="stepInput('inputA', 0.05)">+</button>
+                            <button class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 text-sm border-l border-slate-600" onclick="stepInput('inputA', 0.05)">+</button>
                          </div>
                     </div>
                     <span>(x - </span>
                     <div class="flex flex-col relative">
                         <label class="text-[8px] text-emerald-400 absolute -top-3 left-1">h</label>
                         <div class="flex items-center input-glow bg-slate-900 rounded-lg border-2 border-slate-600 overflow-hidden">
-                            <button class="px-1 py-1 text-slate-400 hover:text-white hover:bg-slate-700 text-xs border-r border-slate-600" onclick="stepInput('inputH', -1)">-</button>
+                            <button class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 text-sm border-r border-slate-600" onclick="stepInput('inputH', -1)">-</button>
                             <input type="number" id="inputH" placeholder="0" class="w-12 bg-transparent text-center text-sm font-bold text-white placeholder-slate-600 appearance-none border-none outline-none">
-                            <button class="px-1 py-1 text-slate-400 hover:text-white hover:bg-slate-700 text-xs border-l border-slate-600" onclick="stepInput('inputH', 1)">+</button>
+                            <button class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 text-sm border-l border-slate-600" onclick="stepInput('inputH', 1)">+</button>
                          </div>
                     </div>
                     <span>)² + </span>
                     <div class="flex flex-col relative">
                         <label class="text-[8px] text-emerald-400 absolute -top-3 left-1">k</label>
                         <div class="flex items-center input-glow bg-slate-900 rounded-lg border-2 border-slate-600 overflow-hidden">
-                            <button class="px-1 py-1 text-slate-400 hover:text-white hover:bg-slate-700 text-xs border-r border-slate-600" onclick="stepInput('inputK', -1)">-</button>
+                            <button class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 text-sm border-r border-slate-600" onclick="stepInput('inputK', -1)">-</button>
                             <input type="number" id="inputK" placeholder="0" class="w-12 bg-transparent text-center text-sm font-bold text-white placeholder-slate-600 appearance-none border-none outline-none">
-                            <button class="px-1 py-1 text-slate-400 hover:text-white hover:bg-slate-700 text-xs border-l border-slate-600" onclick="stepInput('inputK', 1)">+</button>
+                            <button class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 text-sm border-l border-slate-600" onclick="stepInput('inputK', 1)">+</button>
                          </div>
                     </div>
                 </div>
@@ -292,11 +272,11 @@
 
     <script>
         /**
-         * Parabola Cannon: Outdoor Edition v22
+         * Parabola Cannon: Outdoor Edition v32
          * Features:
-         * - AI Has 3 Hearts (Game not over until 3 hits)
-         * - AI Relocates after every turn (Dodge logic)
-         * - Turn-based AI battles (Hit or miss, it switches turns)
+         * - 5 Hearts for 1v1 Duel
+         * - Unified Health System for AI and Versus
+         * - Friendly Fire and Bunker Damage Logic
          */
 
         const canvas = document.getElementById('gameCanvas');
@@ -370,6 +350,9 @@
         const healthWrapper = document.getElementById('healthWrapper');
         const heartsContainer = document.getElementById('heartsContainer');
         const enemyHeartsContainer = document.getElementById('enemyHeartsContainer');
+        const p1HealthLabel = document.getElementById('p1HealthLabel');
+        const p2HealthLabel = document.getElementById('p2HealthLabel');
+        const p2HealthPanel = document.getElementById('p2HealthPanel');
         
         const groundModeToggle = document.getElementById('groundModeToggle');
         const inputModeToggle = document.getElementById('inputModeToggle');
@@ -386,10 +369,9 @@
             mode: null, 
             turn: 1, 
             width: 0, height: 0, originX: 0, originY: 0, gridSize: 40,
-            p1: { x: -10, score: 0 },
-            p2: { x: 10, score: 0 },
-            health: 3, 
-            aiHealth: 3,
+            wallHeight: 0, 
+            p1: { x: -10, score: 0, health: 5 },
+            p2: { x: 10, score: 0, health: 5 },
             practiceTarget: { x: 0, y: 0 },
             practiceScore: 0,
             practiceStreak: 0,
@@ -400,11 +382,11 @@
             gameOver: false
         };
 
-        const CONSTANTS = { BARRIER_LIMIT: 4, WIN_SCORE: 5, WALL_HEIGHT: 8 };
+        const CONSTANTS = { BARRIER_LIMIT: 4, WIN_SCORE: 5, VERSUS_HEARTS: 5, AI_HEARTS: 3 }; 
         const COLORS = {
             skyTop: '#60a5fa', skyBottom: '#bfdbfe', ground: '#4ade80', groundDark: '#22c55e', 
             grid: 'rgba(255,255,255,0.4)', axis: 'rgba(0,0,0,0.6)', text: 'rgba(0,0,0,0.5)',
-            player1: '#3b82f6', player2: '#ef4444', projectile: '#111827', barrier: '#475569', barrierLine: '#1e293b'
+            player1: '#3b82f6', player2: '#ef4444', projectile: '#fbbf24', barrier: '#475569', barrierLine: '#1e293b'
         };
 
         // --- INPUT STEPPER ---
@@ -418,15 +400,37 @@
             input.dispatchEvent(new Event('input'));
         };
 
+        // --- GLOBAL KEY CONTROLS ---
+        window.addEventListener('keydown', (e) => { 
+            if (e.key === 'Enter') {
+                fire();
+                return;
+            }
+            // Allow arrow keys to move cannon if no input is focused
+            if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                if (document.activeElement.tagName === 'INPUT') return;
+                
+                const step = 1;
+                const dir = e.key === 'ArrowRight' ? 1 : -1;
+                stepInput('inputCannonX', dir * step);
+            }
+        });
+
         // --- INIT ---
         function startGame(mode) {
             gameState.mode = mode;
             gameState.gameOver = false;
+            
+            // Randomize Wall Height (1-7)
+            gameState.wallHeight = Math.floor(Math.random() * 7) + 1;
+
             document.getElementById('modeSelectScreen').style.display = 'none';
             document.getElementById('instructions').classList.remove('hidden');
             gameOverScreen.classList.add('hidden');
             healthWrapper.classList.add('hidden');
             turnIndicator.classList.add('hidden');
+            
+            // Allow controls initially
             cannonControlGroup.classList.remove('disabled-control');
             inputCannonX.disabled = false;
 
@@ -440,22 +444,35 @@
                 spawnPracticeTarget();
             } else if (mode === 'versus') {
                 setupMode("1v1 Duel", "text-red-600");
-                gameState.p1.x = -12; gameState.p1.score = 0;
-                gameState.p2.x = 12; gameState.p2.score = 0;
-                instrList.innerHTML = `<p>1. <b>Player 1 (Blue)</b> goes first.</p><p>2. Aim at <b>Player 2 (Red)</b>.</p><p>3. First to 5 points wins!</p><p class="text-red-500 font-bold">WARNING: Center Bunker blocks low shots!</p>`;
+                gameState.p1.x = -12; gameState.p1.health = CONSTANTS.VERSUS_HEARTS;
+                gameState.p2.x = 12; gameState.p2.health = CONSTANTS.VERSUS_HEARTS;
+                
+                // Show Hearts for VS
+                healthWrapper.classList.remove('hidden');
+                p1HealthLabel.textContent = "PLAYER 1";
+                p2HealthLabel.textContent = "PLAYER 2";
+                p2HealthPanel.classList.remove("border-amber-500");
+                p2HealthPanel.classList.add("border-red-500");
+                p2HealthLabel.className = "text-[10px] text-red-600 font-bold uppercase mr-1";
+                updateHealthUI();
+
+                instrList.innerHTML = `<p>1. <b>Player 1 (Blue)</b> goes first.</p><p>2. Aim at <b>Player 2 (Red)</b>.</p><p>3. Deplete opponent's <b>5 Hearts</b>!</p><p class="text-red-500 font-bold">WARNING: Bunker blocks shots!</p>`;
                 startTurn(1);
             } else if (mode === 'computer') {
                 setupMode("Vs Computer", "text-amber-500");
                 gameState.p1.x = -10; gameState.p2.x = 12; 
-                gameState.p1.score = 0; gameState.health = 3; gameState.aiHealth = 3;
+                gameState.p1.health = CONSTANTS.AI_HEARTS; 
+                gameState.p2.health = CONSTANTS.AI_HEARTS;
                 
-                // Disable cannon move in computer mode
-                cannonControlGroup.classList.add('disabled-control');
-                inputCannonX.disabled = true;
-
                 healthWrapper.classList.remove('hidden');
+                p1HealthLabel.textContent = "YOU";
+                p2HealthLabel.textContent = "ENEMY";
+                p2HealthPanel.classList.remove("border-red-500");
+                p2HealthPanel.classList.add("border-amber-500");
+                p2HealthLabel.className = "text-[10px] text-amber-600 font-bold uppercase mr-1";
                 updateHealthUI();
-                instrList.innerHTML = `<p>1. Destroy the <b>Red Enemy</b>.</p><p>2. Enemy relocates after every turn!</p><p>3. You have <b>3 Hearts</b>.</p><p class="text-red-500 font-bold">WARNING: Center Bunker blocks low shots!</p>`;
+                
+                instrList.innerHTML = `<p>1. Destroy the <b>Red Enemy</b>.</p><p>2. Enemy relocates after every turn!</p><p>3. You have <b>3 Hearts</b>.</p><p class="text-red-500 font-bold">WARNING: Center Bunker blocks shots!</p>`;
                 startTurn(1);
             }
             initCanvas();
@@ -513,23 +530,34 @@
                 controlPanel.className = `h-32 border-t flex items-center justify-between px-6 z-20 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.3)] shrink-0 transition-colors duration-500 ${isP1 ? 'bg-slate-800 border-slate-700' : 'bg-red-900/20 border-red-900/50'}`;
             }
 
+            // DYNAMIC LOCKING: Lock only if computer mode AND it is AI's turn
+            const shouldLock = (gameState.mode === 'computer' && !isP1);
+            if (shouldLock) {
+                cannonControlGroup.classList.add('disabled-control');
+                inputCannonX.disabled = true;
+            } else {
+                cannonControlGroup.classList.remove('disabled-control');
+                inputCannonX.disabled = false;
+            }
+
             // Controls
             if (isP1) {
-                // Only update cannon X if enabled
-                if(!inputCannonX.disabled) inputCannonX.value = gameState.p1.x;
+                inputCannonX.value = gameState.p1.x; // Sync Value
                 inputX.value = ''; inputY.value = ''; inputA.value = ''; inputH.value = ''; inputK.value = '';
                 fireBtn.disabled = false;
                 fireBtn.innerText = "FIRE";
                 logEvent(`Round Start: Player 1`, 'info');
             } else {
-                // Enemy Turn
-                fireBtn.disabled = true;
+                inputCannonX.value = gameState.p2.x; // Sync Value
+                
                 if (gameState.mode === 'computer') {
+                    fireBtn.disabled = true;
                     fireBtn.innerText = "AI TARGETING...";
                     logEvent("Enemy targeting...", "warning");
                     setTimeout(computerTurn, 1500);
                 } else {
-                    inputCannonX.value = gameState.p2.x;
+                    fireBtn.disabled = false;
+                    fireBtn.innerText = "FIRE";
                     logEvent(`Round Start: Player 2`, 'info');
                 }
             }
@@ -552,13 +580,15 @@
             // 2. Fire Solution (AI Math)
             const p1 = gameState.p1.x;
             const p2 = gameState.p2.x; // Uses new position
-            const variance = (Math.random() - 0.5) * 4; // +/- 2 units error
+            const variance = (Math.random() - 0.5) * 12; // INCREASED VARIANCE +/- 6 units
             const targetX = p1 + variance;
             const startX = p2;
             
             const h = (startX + targetX) / 2;
             const dist = Math.abs(startX - targetX);
-            const k = dist / 2 + 5; 
+            
+            // ADAPTIVE AI: Enforce minimum height to clear CURRENT bunker height
+            const k = Math.max(dist / 2 + 5, gameState.wallHeight + 5); 
             
             const a = -k / Math.pow(startX - h, 2);
 
@@ -569,9 +599,9 @@
 
                 gameState.isFiring = true;
                 gameState.projectiles.push({
-                    cx: startX, cy: 0, vx: (h > startX ? 0.15 : -0.15),
+                    cx: startX, cy: 2, vx: (h > startX ? 0.2 : -0.2), // Increased speed, spawn higher
                     a: a, h: h, k: k,
-                    owner: 2, trail: []
+                    owner: 2, trail: [], frame: 0, safe: true
                 });
             }, 800);
         }
@@ -579,27 +609,31 @@
         function updateStatsUI() {
             if (gameState.mode === 'practice') {
                 statsContent.innerHTML = `<div><p class="text-[10px] text-slate-500 uppercase">Score</p><p class="text-2xl font-bold text-emerald-400">${gameState.practiceScore}</p></div><div><p class="text-[10px] text-slate-500 uppercase">Streak</p><p class="text-2xl font-bold text-amber-400">${gameState.practiceStreak}</p></div>`;
-            } else if (gameState.mode === 'versus') {
-                statsContent.innerHTML = `<div><p class="text-[10px] text-blue-500 uppercase">P1 Score</p><p class="text-2xl font-bold text-blue-400">${gameState.p1.score}</p></div><div><p class="text-[10px] text-red-500 uppercase">P2 Score</p><p class="text-2xl font-bold text-red-400">${gameState.p2.score}</p></div>`;
             } else {
-                statsContent.innerHTML = `<div><p class="text-[10px] text-blue-500 uppercase">Hit Count</p><p class="text-2xl font-bold text-blue-400">${3 - gameState.aiHealth}/3</p></div><div><p class="text-[10px] text-slate-500 uppercase">Mode</p><p class="text-lg font-bold text-amber-400">SURVIVAL</p></div>`;
+                // For VS and Computer, stats are less relevant now that hearts are visible
+                statsContent.innerHTML = `<div><p class="text-[10px] text-slate-500 uppercase">Status</p><p class="text-lg font-bold text-amber-400">ACTIVE COMBAT</p></div>`;
             }
         }
 
         function updateHealthUI() {
-            // Player
+            // Player 1
+            const maxP1 = gameState.mode === 'computer' ? CONSTANTS.AI_HEARTS : CONSTANTS.VERSUS_HEARTS;
             heartsContainer.innerHTML = '';
-            for(let i=0; i<3; i++) {
+            for(let i=0; i<maxP1; i++) {
                 const s = document.createElement('span');
-                s.className = 'heart-icon ' + (i >= gameState.health ? 'heart-lost' : '');
+                s.className = 'heart-icon ' + (i >= gameState.p1.health ? 'heart-lost' : '');
+                s.style.color = i >= gameState.p1.health ? '' : '#3b82f6'; // Blue hearts for P1
                 s.innerText = '♥';
                 heartsContainer.appendChild(s);
             }
-            // Enemy
+            
+            // Player 2 / Enemy
+            const maxP2 = gameState.mode === 'computer' ? CONSTANTS.AI_HEARTS : CONSTANTS.VERSUS_HEARTS;
             enemyHeartsContainer.innerHTML = '';
-            for(let i=0; i<3; i++) {
+            for(let i=0; i<maxP2; i++) {
                 const s = document.createElement('span');
-                s.className = 'heart-icon ' + (i >= gameState.aiHealth ? 'heart-lost' : '');
+                s.className = 'heart-icon ' + (i >= gameState.p2.health ? 'heart-lost' : '');
+                s.style.color = i >= gameState.p2.health ? '' : (gameState.mode === 'computer' ? '#d97706' : '#ef4444'); // Amber or Red
                 s.innerText = '♥';
                 enemyHeartsContainer.appendChild(s);
             }
@@ -681,7 +715,7 @@
             // Barrier (Wall) - Drawn in Versus AND Computer now
             if(gameState.mode === 'versus' || gameState.mode === 'computer') {
                 const wallW = 2; // -1 to 1 logic width
-                const wallH = CONSTANTS.WALL_HEIGHT;
+                const wallH = gameState.wallHeight; // Use Dynamic Height
                 const centerX = gameState.originX;
                 const bottomY = gameState.originY;
                 const topY = bottomY - (wallH * gameState.gridSize);
@@ -695,7 +729,7 @@
                 ctx.beginPath(); for(let i=0; i<heightPx; i+=20) { ctx.moveTo(leftX, topY + i); ctx.lineTo(leftX + widthPx, topY + i); } ctx.stroke();
                 
                 ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.font = "bold 10px sans-serif"; ctx.textAlign = "center";
-                ctx.fillText("BUNKER", centerX, topY + 15);
+                ctx.fillText(`BUNKER`, centerX, topY + 15);
             }
 
             drawEntities();
@@ -742,10 +776,15 @@
         function drawProjectiles() {
             gameState.projectiles.forEach(p => {
                 const pos = toScreen(p.cx, p.cy);
+                // Draw thick glow for visibility
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = COLORS.projectile;
                 ctx.fillStyle = COLORS.projectile;
-                ctx.beginPath(); ctx.arc(pos.x, pos.y, 5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(pos.x, pos.y, 6, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0; // Reset
+
                 if (p.trail && p.trail.length > 0) {
-                    ctx.beginPath(); ctx.strokeStyle = p.owner === 2 ? '#ef4444' : 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.strokeStyle = p.owner === 2 ? '#ef4444' : 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3;
                     p.trail.forEach((pt, i) => { const s = toScreen(pt.x, pt.y); if(i===0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y); });
                     ctx.stroke();
                 }
@@ -755,13 +794,17 @@
         function update() {
             for(let i=gameState.projectiles.length-1; i>=0; i--) {
                 let p = gameState.projectiles[i];
+                // Fusing: Increment Frame Count
+                if (p.frame === undefined) p.frame = 0;
+                p.frame++;
+
                 p.cx += p.vx;
                 p.cy = p.a * Math.pow(p.cx - p.h, 2) + p.k;
                 p.trail.push({x: p.cx, y: p.cy});
 
-                // Bunker Collision
+                // Bunker Collision - DESTROYS PROJECTILE
                 if (gameState.mode !== 'practice') {
-                    if (Math.abs(p.cx) < 1.0 && p.cy < CONSTANTS.WALL_HEIGHT) {
+                    if (Math.abs(p.cx) < 1.5 && p.cy < gameState.wallHeight) { // Check against Dynamic Height
                         gameState.projectiles.splice(i, 1);
                         if(gameState.mode === 'practice') {
                              logEvent("Impact on Bunker Wall.");
@@ -780,66 +823,53 @@
                 // Ground Collision
                 if(p.cy < -0.5) { hit(p.cx, 0, p); gameState.projectiles.splice(i, 1); continue; }
                 
-                // Entity Collision
-                if(gameState.mode === 'practice') {
-                     const dx = p.cx - gameState.practiceTarget.x;
-                     const dy = p.cy - gameState.practiceTarget.y;
-                     if(Math.sqrt(dx*dx + dy*dy) < 0.8) { hit(p.cx, p.cy, p, true); gameState.projectiles.splice(i, 1); continue; }
-                } else {
-                    // Versus / Computer collision
-                    // Check against P1
-                    const d1x = p.cx - gameState.p1.x;
-                    const d1y = p.cy - 0;
-                    if (Math.sqrt(d1x*d1x + d1y*d1y) < 1.0) {
-                        // Hit Player 1
-                        if (p.owner === 1) { // Self Hit
-                            logEvent("FRIENDLY FIRE! -1 Heart/Point");
-                             if(gameState.mode === 'computer') {
-                                 gameState.health--; updateHealthUI();
-                                 if(gameState.health <= 0) endGame("COMPUTER"); else startTurn(2);
-                             } else {
-                                 gameState.p2.score++;
-                                 if(gameState.p2.score >= CONSTANTS.WIN_SCORE) endGame(2); else startTurn(2);
-                             }
-                        } else { // Enemy hit Player 1
-                            if(gameState.mode === 'computer') {
-                                gameState.health--; updateHealthUI();
-                                logEvent("HULL DAMAGE DETECTED!", "error");
-                                if(gameState.health <= 0) endGame("COMPUTER"); else startTurn(1);
-                            } else {
-                                gameState.p2.score++;
-                                if(gameState.p2.score >= CONSTANTS.WIN_SCORE) endGame(2); else startTurn(1);
+                // Entity Collision - SAFE FUSING ADDED (Wait 30 frames before checking hits)
+                if (p.frame > 30) {
+                    if(gameState.mode === 'practice') {
+                         const dx = p.cx - gameState.practiceTarget.x;
+                         const dy = p.cy - gameState.practiceTarget.y;
+                         if(Math.sqrt(dx*dx + dy*dy) < 0.8) { hit(p.cx, p.cy, p, true); gameState.projectiles.splice(i, 1); continue; }
+                    } else {
+                        // Versus / Computer collision
+                        // Check against P1
+                        const d1x = p.cx - gameState.p1.x;
+                        const d1y = p.cy - 0;
+                        if (Math.sqrt(d1x*d1x + d1y*d1y) < 1.0) {
+                            // Hit Player 1
+                            if (p.owner === 1) { // Self Hit
+                                logEvent("FRIENDLY FIRE! -1 Heart");
+                                gameState.p1.health--; updateHealthUI();
+                                if(gameState.p1.health <= 0) endGame(2); // P2/AI wins
+                                else if(gameState.mode === 'computer') startTurn(2); 
+                                else startTurn(2);
+                            } else { // Enemy hit Player 1
+                                gameState.p1.health--; updateHealthUI();
+                                logEvent("PLAYER 1 HIT!", "error");
+                                if(gameState.p1.health <= 0) endGame(2); // P2 wins
+                                else if(gameState.mode === 'computer') startTurn(1); // Player's turn
+                                else startTurn(1);
                             }
+                            gameState.projectiles.splice(i, 1); gameState.craters = []; gameState.isFiring = false; fireBtn.disabled = false; updateStatsUI(); continue;
                         }
-                        gameState.projectiles.splice(i, 1); gameState.craters = []; gameState.isFiring = false; fireBtn.disabled = false; updateStatsUI(); continue;
-                    }
 
-                    // Check against P2
-                    const d2x = p.cx - gameState.p2.x;
-                    const d2y = p.cy - 0;
-                    if (Math.sqrt(d2x*d2x + d2y*d2y) < 1.0) {
-                        // Hit Player 2
-                        if (p.owner === 2) { // AI Self Hit
-                             if(gameState.mode === 'computer') {
-                                 logEvent("Enemy Self-Damage!");
-                                 gameState.aiHealth--; updateHealthUI();
-                                 if(gameState.aiHealth <= 0) endGame(1); else startTurn(1);
-                             } else {
-                                 gameState.p1.score++;
-                                 if(gameState.p1.score >= CONSTANTS.WIN_SCORE) endGame(1); else startTurn(1);
-                             }
-                        } else { // Player 1 hit Player 2
-                            if(gameState.mode === 'computer') {
-                                gameState.aiHealth--; updateHealthUI();
-                                logEvent("Direct Hit on Enemy!", "text-emerald-400");
-                                if(gameState.aiHealth <= 0) endGame(1);
-                                else startTurn(2); // AI Turn after getting hit
-                            } else {
-                                gameState.p1.score++;
-                                if(gameState.p1.score >= CONSTANTS.WIN_SCORE) endGame(1); else startTurn(2);
+                        // Check against P2
+                        const d2x = p.cx - gameState.p2.x;
+                        const d2y = p.cy - 0;
+                        if (Math.sqrt(d2x*d2x + d2y*d2y) < 1.0) {
+                            // Hit Player 2
+                            if (p.owner === 2) { // P2 Self Hit
+                                 logEvent("P2 SELF DAMAGE! -1 Heart");
+                                 gameState.p2.health--; updateHealthUI();
+                                 if(gameState.p2.health <= 0) endGame(1); else startTurn(1);
+                            } else { // Player 1 hit Player 2
+                                gameState.p2.health--; updateHealthUI();
+                                logEvent("PLAYER 2 HIT!", "text-emerald-400");
+                                if(gameState.p2.health <= 0) endGame(1);
+                                else if(gameState.mode === 'computer') startTurn(2); // AI retaliation
+                                else startTurn(2);
                             }
+                            gameState.projectiles.splice(i, 1); gameState.craters = []; gameState.isFiring = false; fireBtn.disabled = false; updateStatsUI(); continue;
                         }
-                        gameState.projectiles.splice(i, 1); gameState.craters = []; gameState.isFiring = false; fireBtn.disabled = false; updateStatsUI(); continue;
                     }
                 }
                 
@@ -857,6 +887,7 @@
                 } 
                 gameState.craters = [];
             } else {
+                // Miss
                 gameState.craters.push({x: x, y: y});
                 if(gameState.mode === 'practice') {
                      gameState.practiceStreak = 0;
@@ -876,14 +907,21 @@
         function endGame(winner) {
             gameState.gameOver = true;
             gameOverScreen.classList.remove('hidden');
-            winTitle.textContent = winner === "COMPUTER" ? "DEFEAT" : "VICTORY";
-            winSub.textContent = winner === "COMPUTER" ? "Mission Failed" : `Player ${winner} Wins!`;
+            
+            if(gameState.mode === 'computer') {
+                winTitle.textContent = winner === 2 ? "DEFEAT" : "VICTORY";
+                winSub.textContent = winner === 2 ? "Mission Failed" : "Target Destroyed!";
+            } else {
+                winTitle.textContent = "GAME OVER";
+                winSub.textContent = `Player ${winner} Wins!`;
+            }
         }
 
         function fire() {
             if(gameState.isFiring) return;
             
             let a, h, k;
+            // FIX: Always rely on valid input value, ensuring correct startX
             const startX = parseFloat(inputCannonX.value);
             
             if(formulaModeToggle.checked) {
@@ -911,9 +949,9 @@
 
             const dir = (h > startX) ? 1 : -1; 
             gameState.projectiles.push({
-                cx: startX, cy: 0, vx: 0.15 * dir,
+                cx: startX, cy: 2, vx: 0.2 * dir,
                 a: a, h: h, k: k,
-                owner: gameState.turn, trail: []
+                owner: gameState.turn, trail: [], frame: 0, safe: true
             });
         }
 
@@ -931,12 +969,19 @@
         groundModeToggle.addEventListener('change', () => { if(gameState.mode === 'practice') spawnPracticeTarget(); });
         
         inputCannonX.addEventListener('input', (e) => {
-             if(gameState.mode === 'versus') {
+             if(gameState.mode === 'versus' || gameState.mode === 'computer') {
                  const v = parseFloat(e.target.value);
                  const limit = CONSTANTS.BARRIER_LIMIT;
-                 if(gameState.turn === 1 && v > -limit) e.target.value = -limit;
-                 if(gameState.turn === 2 && v < limit) e.target.value = limit;
-                 if(gameState.turn === 1) gameState.p1.x = parseFloat(e.target.value); else gameState.p2.x = parseFloat(e.target.value);
+                 // P1 Constraints (Applies to both Versus and Computer)
+                 if(gameState.turn === 1) {
+                     if(v > -limit) e.target.value = -limit;
+                     gameState.p1.x = parseFloat(e.target.value);
+                 }
+                 // P2 Constraints (Versus only, AI moves itself)
+                 else if (gameState.turn === 2 && gameState.mode === 'versus') {
+                     if(v < limit) e.target.value = limit;
+                     gameState.p2.x = parseFloat(e.target.value);
+                 }
              } else {
                  gameState.p1.x = parseFloat(e.target.value);
              }

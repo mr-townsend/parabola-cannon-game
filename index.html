@@ -93,7 +93,7 @@
             <h2 class="text-4xl font-bold text-white mb-2" id="winTitle">GAME OVER</h2>
             <p class="text-xl text-slate-400 mb-8" id="winSub">Player X Wins!</p>
             <button onclick="resetGame()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg text-lg">REMATCH</button>
-            <button onclick="location.reload()" class="mt-4 w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-3 rounded-xl transition-all">Main Menu</button>
+            <button onclick="exitToMenu()" class="mt-4 w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-3 rounded-xl transition-all">Main Menu</button>
         </div>
     </div>
 
@@ -211,7 +211,7 @@
 
             <!-- Settings Button -->
             <div class="relative flex items-center h-full pl-6 border-l border-slate-600">
-                <button id="homeBtn" onclick="location.reload()" class="bg-slate-700 hover:bg-red-600 text-slate-300 p-3 rounded-xl transition-all shadow-lg active:scale-95 mr-2" title="Exit to Menu">
+                <button id="homeBtn" onclick="exitToMenu()" class="bg-slate-700 hover:bg-red-600 text-slate-300 p-3 rounded-xl transition-all shadow-lg active:scale-95 mr-2" title="Exit to Menu">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                 </button>
                 <button id="settingsBtn" class="bg-slate-700 hover:bg-slate-600 text-slate-300 p-3 rounded-xl transition-all shadow-lg active:scale-95 group">
@@ -272,17 +272,18 @@
 
     <script>
         /**
-         * Parabola Cannon: Outdoor Edition v33
+         * Parabola Cannon: Outdoor Edition v35
          * Features:
-         * - Fixes infinite game loop crash (animations cancelled correctly)
-         * - Fixes duplicate event listener stacking
-         * - Unified Hearts for Versus (5 each) and Computer (3 each)
+         * - Fixes infinite game loop crash via cancelAnimationFrame
+         * - Replaces hard reload with soft reset (exitToMenu)
+         * - Single Resize Listener
          */
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        let animationFrameId; // To control game loop cancellation
+        let animationFrameId = null;
+        let aiTimeout = null;
 
         // --- ASSETS ---
         const sprites = { blue: new Image(), red: new Image() };
@@ -408,10 +409,8 @@
                 fire();
                 return;
             }
-            // Allow arrow keys to move cannon if no input is focused
             if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
                 if (document.activeElement.tagName === 'INPUT') return;
-                
                 const step = 1;
                 const dir = e.key === 'ArrowRight' ? 1 : -1;
                 stepInput('inputCannonX', dir * step);
@@ -420,8 +419,13 @@
 
         // --- INIT ---
         function startGame(mode) {
-            // Cancel previous loop to prevent crashing
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            if (aiTimeout) clearTimeout(aiTimeout);
+
+            // Clean Slate
+            gameState.projectiles = [];
+            gameState.craters = [];
+            gameState.isFiring = false;
 
             gameState.mode = mode;
             gameState.gameOver = false;
@@ -452,7 +456,6 @@
                 gameState.p1.x = -12; gameState.p1.health = CONSTANTS.VERSUS_HEARTS;
                 gameState.p2.x = 12; gameState.p2.health = CONSTANTS.VERSUS_HEARTS;
                 
-                // Show Hearts for VS
                 healthWrapper.classList.remove('hidden');
                 p1HealthLabel.textContent = "PLAYER 1";
                 p2HealthLabel.textContent = "PLAYER 2";
@@ -481,7 +484,6 @@
                 startTurn(1);
             }
             
-            // Start Loop fresh
             initCanvas();
             updateStatsUI();
         }
@@ -491,7 +493,23 @@
             modeBadge.className = `text-[10px] font-bold uppercase ${colorClass}`;
         }
 
+        function exitToMenu() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            if (aiTimeout) clearTimeout(aiTimeout);
+            
+            // Clean
+            gameState.projectiles = [];
+            gameState.craters = [];
+            gameState.isFiring = false;
+            
+            // UI Reset
+            document.getElementById('instructions').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('modeSelectScreen').style.display = 'flex';
+        }
+
         function resetGame() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
             gameState.p1.score = 0; gameState.p2.score = 0;
             gameState.practiceScore = 0; gameState.practiceStreak = 0;
             gameState.craters = [];
@@ -502,16 +520,15 @@
         }
 
         function initCanvas() {
-            // Cancel any existing loop to be safe
+            // Cancel loop just in case
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            
             resize();
             gameLoop();
             setTimeout(() => inputX.focus(), 100);
             updateUIModes();
         }
 
-        // Move event listener out of init to prevent stacking
+        // Single Listener
         window.addEventListener('resize', resize);
 
         function resize() {
@@ -531,6 +548,8 @@
         }
 
         function startTurn(playerNum) {
+            if (aiTimeout) clearTimeout(aiTimeout);
+
             gameState.turn = playerNum;
             const isP1 = playerNum === 1;
             
@@ -543,7 +562,7 @@
                 controlPanel.className = `h-32 border-t flex items-center justify-between px-6 z-20 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.3)] shrink-0 transition-colors duration-500 ${isP1 ? 'bg-slate-800 border-slate-700' : 'bg-red-900/20 border-red-900/50'}`;
             }
 
-            // DYNAMIC LOCKING: Lock only if computer mode AND it is AI's turn
+            // DYNAMIC LOCKING
             const shouldLock = (gameState.mode === 'computer' && !isP1);
             if (shouldLock) {
                 cannonControlGroup.classList.add('disabled-control');
@@ -567,7 +586,7 @@
                     fireBtn.disabled = true;
                     fireBtn.innerText = "AI TARGETING...";
                     logEvent("Enemy targeting...", "warning");
-                    setTimeout(computerTurn, 1500);
+                    aiTimeout = setTimeout(computerTurn, 1500);
                 } else {
                     fireBtn.disabled = false;
                     fireBtn.innerText = "FIRE";
@@ -581,38 +600,33 @@
         function computerTurn() {
             if(gameState.gameOver) return;
 
-            // 1. Relocate (Dodge Logic)
             const minX = CONSTANTS.BARRIER_LIMIT + 2; 
             const maxX = Math.floor(gameState.width / 2 / gameState.gridSize) - 2;
             let newX = Math.floor(Math.random() * (maxX - minX + 1)) + minX;
-            // Keep it positive for Player 2 side
             
             gameState.p2.x = newX;
             logEvent(`Enemy relocated to X=${newX}`, "warning");
 
-            // 2. Fire Solution (AI Math)
+            // AI Math
             const p1 = gameState.p1.x;
-            const p2 = gameState.p2.x; // Uses new position
-            const variance = (Math.random() - 0.5) * 12; // INCREASED VARIANCE +/- 6 units
+            const p2 = gameState.p2.x; 
+            const variance = (Math.random() - 0.5) * 12; // Variance
             const targetX = p1 + variance;
             const startX = p2;
             
             const h = (startX + targetX) / 2;
             const dist = Math.abs(startX - targetX);
-            
-            // ADAPTIVE AI: Enforce minimum height to clear CURRENT bunker height
             const k = Math.max(dist / 2 + 5, gameState.wallHeight + 5); 
             
             const a = -k / Math.pow(startX - h, 2);
 
-            // Delay shot slightly after move for visual clarity
-            setTimeout(() => {
+            aiTimeout = setTimeout(() => {
                 logEvent("Enemy Fired!", "warning");
                 equationDisplay.innerHTML = `AI: y = ${a.toFixed(2)}(x - ${h.toFixed(1)})² + ${k.toFixed(1)}`;
 
                 gameState.isFiring = true;
                 gameState.projectiles.push({
-                    cx: startX, cy: 2, vx: (h > startX ? 0.2 : -0.2), // Increased speed, spawn higher
+                    cx: startX, cy: 2, vx: (h > startX ? 0.2 : -0.2),
                     a: a, h: h, k: k,
                     owner: 2, trail: [], frame: 0, safe: true
                 });
@@ -623,7 +637,6 @@
             if (gameState.mode === 'practice') {
                 statsContent.innerHTML = `<div><p class="text-[10px] text-slate-500 uppercase">Score</p><p class="text-2xl font-bold text-emerald-400">${gameState.practiceScore}</p></div><div><p class="text-[10px] text-slate-500 uppercase">Streak</p><p class="text-2xl font-bold text-amber-400">${gameState.practiceStreak}</p></div>`;
             } else {
-                // For VS and Computer, stats are less relevant now that hearts are visible
                 statsContent.innerHTML = `<div><p class="text-[10px] text-slate-500 uppercase">Status</p><p class="text-lg font-bold text-amber-400">ACTIVE COMBAT</p></div>`;
             }
         }

@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parabola Cannon: Outdoor Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #0f172a;
+            color: #1e293b;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .input-glow:focus {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .math-font {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+
+        /* Scrollbar for logs */
+        .log-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .log-scroll::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        .log-scroll::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 3px;
+        }
+        
+        /* Checkbox custom style */
+        .toggle-checkbox:checked {
+            background-color: #3b82f6;
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex bg-slate-900">
+
+    <!-- LEFT SIDE: Game Canvas + Bottom Controls -->
+    <div class="flex-grow flex flex-col h-full min-w-0">
+        
+        <!-- Game Canvas Container (Flex Grow takes remaining space) -->
+        <div class="relative flex-grow bg-slate-900 overflow-hidden">
+            
+            <!-- Top Title (Minimal) -->
+            <div class="absolute top-4 left-4 pointer-events-none z-10">
+                <div class="glass-panel px-4 py-2 rounded-xl shadow-lg">
+                    <h1 class="text-lg font-bold text-slate-800">PARABOLA CANNON</h1>
+                    <p class="text-[10px] text-slate-500 font-bold uppercase">Standard: HSF.IF.B.4</p>
+                </div>
+            </div>
+
+            <!-- Game Canvas -->
+            <canvas id="gameCanvas" class="w-full h-full cursor-crosshair block"></canvas>
+            
+            <!-- Instructions Overlay -->
+            <div id="instructions" class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-white max-w-lg w-full p-8 rounded-2xl text-center shadow-2xl border border-slate-200">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">📐</div>
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">Field Mission</h2>
+                    <p class="text-slate-500 mb-6 text-sm">Apply coordinate geometry to calculate the projectile trajectory.</p>
+                    
+                    <div class="text-left space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6">
+                        <p class="text-slate-700 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">1</span> Set <span class="text-blue-600 font-bold">Cannon X</span> position.</p>
+                        <p class="text-slate-700 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">2</span> Locate the <span class="text-red-500 font-bold">Target</span>.</p>
+                        <p class="text-slate-700 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">3</span> Input <span class="font-bold">Target X</span> and <span class="font-bold">Height/Y</span>.</p>
+                        <p class="text-slate-700 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">4</span> Fire and analyze the path.</p>
+                    </div>
+                    
+                    <button onclick="document.getElementById('instructions').style.display='none'" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg">
+                        Start Simulation
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM CONTROL PANEL -->
+        <div class="h-28 bg-slate-800 border-t border-slate-700 flex items-center justify-between px-6 z-20 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.3)] shrink-0">
+            
+            <div class="flex items-center gap-6">
+                <!-- Cannon Pos -->
+                <div class="flex flex-col relative border-r border-slate-600 pr-6 mr-2">
+                    <label class="text-[10px] text-blue-400 font-bold uppercase mb-1 ml-1">Cannon X</label>
+                    <input type="number" id="inputCannonX" placeholder="0" value="0" class="input-glow w-20 bg-slate-900 border-2 border-blue-500/50 rounded-lg py-2 px-3 text-center text-lg font-bold text-white placeholder-slate-600 appearance-none">
+                </div>
+
+                <!-- Inputs -->
+                <div class="flex gap-4 items-end">
+                    <div class="flex flex-col relative">
+                        <label class="text-[10px] text-slate-400 font-bold uppercase mb-1 ml-1">Target X</label>
+                        <input type="number" id="inputX" placeholder="0" value="0" class="input-glow w-24 bg-slate-900 border-2 border-slate-600 rounded-lg py-2 px-3 text-center text-lg font-bold text-white placeholder-slate-600 appearance-none">
+                    </div>
+                    
+                    <div class="flex flex-col relative">
+                        <label id="labelY" class="text-[10px] text-slate-400 font-bold uppercase mb-1 ml-1">Target Y</label>
+                        <input type="number" id="inputY" placeholder="0" value="0" class="input-glow w-24 bg-slate-900 border-2 border-slate-600 rounded-lg py-2 px-3 text-center text-lg font-bold text-white placeholder-slate-600 appearance-none">
+                    </div>
+
+                    <button id="fireBtn" class="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-blue-900/50 transition-all transform hover:scale-105 active:scale-95 h-[50px] flex items-center border border-blue-400/30">
+                        FIRE
+                    </button>
+                </div>
+            </div>
+
+            <!-- Settings Button & Drawer -->
+            <div class="relative flex items-center h-full pl-6 border-l border-slate-600">
+                <button id="settingsBtn" class="bg-slate-700 hover:bg-slate-600 text-slate-300 p-3 rounded-xl transition-all shadow-lg active:scale-95 group">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:rotate-45 transition-transform"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
+
+                <!-- Hidden Drawer -->
+                <div id="settingsDrawer" class="absolute bottom-[calc(100%+12px)] right-0 bg-slate-800 border border-slate-600 p-5 rounded-xl shadow-2xl flex flex-col gap-4 min-w-[240px] transition-all transform origin-bottom-right scale-0 opacity-0 pointer-events-none z-50">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-700 pb-2">Mission Settings</h3>
+                    
+                    <!-- Input Mode Toggle -->
+                    <label class="flex items-center justify-between cursor-pointer gap-3 group" title="Toggle between Target Y and Vertex Height input">
+                        <span class="text-xs font-bold text-slate-300 uppercase group-hover:text-amber-400 transition-colors">Manual Peak Mode</span>
+                        <input type="checkbox" id="inputModeToggle" class="w-5 h-5 accent-amber-500 rounded cursor-pointer toggle-checkbox bg-slate-700 border-slate-500" checked>
+                    </label>
+
+                    <!-- Ground Mode Toggle -->
+                    <label class="flex items-center justify-between cursor-pointer gap-3 group" title="Target always at Y=0">
+                        <span class="text-xs font-bold text-slate-300 uppercase group-hover:text-blue-400 transition-colors">Ground Targets Only</span>
+                        <input type="checkbox" id="groundModeToggle" class="w-5 h-5 accent-blue-600 rounded cursor-pointer toggle-checkbox bg-slate-700 border-slate-500">
+                    </label>
+
+                    <!-- Show Coords Toggle -->
+                    <label class="flex items-center justify-between cursor-pointer gap-3 group" title="Hide/Show Target Coordinates">
+                        <span class="text-xs font-bold text-slate-300 uppercase group-hover:text-emerald-400 transition-colors">Show Coordinates</span>
+                        <input type="checkbox" id="showCoordsToggle" class="w-5 h-5 accent-emerald-500 rounded cursor-pointer toggle-checkbox bg-slate-700 border-slate-500">
+                    </label>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR: Status & Logs -->
+    <div class="w-80 h-full bg-slate-900 border-l border-slate-700 flex flex-col p-4 shadow-2xl z-30 shrink-0">
+        
+        <!-- Stats Block -->
+        <div class="bg-slate-800 rounded-xl p-4 mb-4 border border-slate-700">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Mission Stats</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-[10px] text-slate-500 uppercase">Score</p>
+                    <p id="scoreDisplay" class="text-2xl font-bold text-emerald-400">0</p>
+                </div>
+                <div>
+                    <p class="text-[10px] text-slate-500 uppercase">Streak</p>
+                    <p id="streakDisplay" class="text-2xl font-bold text-amber-400">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Math Analysis Block -->
+        <div class="bg-slate-800 rounded-xl p-4 mb-4 border border-slate-700">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Trajectory Data</h2>
+            <div class="space-y-2">
+                <div>
+                    <p class="text-[10px] text-slate-500 uppercase">Vertex (h, k)</p>
+                    <p id="vertexDisplay" class="text-lg font-bold text-blue-400 font-mono">--</p>
+                </div>
+                <div>
+                    <p class="text-[10px] text-slate-500 uppercase">Equation</p>
+                    <p id="equationDisplay" class="text-sm font-bold text-emerald-400 math-font tracking-wide">--</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mission Log -->
+        <div class="flex-grow flex flex-col min-h-0">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mission Log</h2>
+            <div id="logContainer" class="bg-slate-950 rounded-xl flex-grow overflow-y-auto p-3 space-y-2 log-scroll font-mono text-xs border border-slate-800">
+                <div class="text-slate-600 italic">System ready...</div>
+                <div class="text-slate-600 italic">Waiting for input...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /**
+         * Parabola Cannon: Outdoor Edition v7
+         * - Settings Drawer added (Bottom right)
+         * - All defaults reset to 0
+         */
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // UI Elements
+        const inputCannonX = document.getElementById('inputCannonX');
+        const inputX = document.getElementById('inputX');
+        const inputY = document.getElementById('inputY');
+        const labelY = document.getElementById('labelY');
+        const fireBtn = document.getElementById('fireBtn');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsDrawer = document.getElementById('settingsDrawer');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const streakDisplay = document.getElementById('streakDisplay');
+        const vertexDisplay = document.getElementById('vertexDisplay');
+        const equationDisplay = document.getElementById('equationDisplay');
+        const logContainer = document.getElementById('logContainer');
+        const groundModeToggle = document.getElementById('groundModeToggle');
+        const inputModeToggle = document.getElementById('inputModeToggle');
+        const showCoordsToggle = document.getElementById('showCoordsToggle');
+
+        // Game State
+        let gameState = {
+            width: 0,
+            height: 0,
+            originX: 0,
+            originY: 0,
+            gridSize: 40, 
+            cannonX: 0, 
+            target: { x: 0, y: 0 },
+            projectiles: [],
+            persistentTrails: [], 
+            explosions: [],
+            craters: [], 
+            score: 0,
+            streak: 0,
+            isFiring: false,
+        };
+
+        const COLORS = {
+            skyTop: '#60a5fa',     
+            skyBottom: '#bfdbfe',  
+            ground: '#4ade80',     
+            groundDark: '#22c55e', 
+            grid: 'rgba(255,255,255,0.4)',
+            axis: 'rgba(0,0,0,0.6)',
+            text: 'rgba(0,0,0,0.5)',
+            player: '#334155',
+            enemy: '#ef4444',
+            projectile: '#111827',
+        };
+
+        // --- Math Helpers ---
+
+        function logEvent(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.textContent = `> ${msg}`;
+            
+            if (type === 'error') div.className = 'text-red-400 font-bold';
+            else if (type === 'success') div.className = 'text-emerald-400 font-bold';
+            else if (type === 'warning') div.className = 'text-amber-400';
+            else div.className = 'text-slate-300';
+            
+            logContainer.prepend(div);
+            if (logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+
+        function updateInputLabel() {
+            if (inputModeToggle.checked) {
+                labelY.textContent = "Peak Height (k)";
+                labelY.classList.add("text-amber-500");
+                labelY.classList.remove("text-slate-400");
+                inputY.placeholder = "0";
+            } else {
+                labelY.textContent = "Target Y";
+                labelY.classList.remove("text-amber-500");
+                labelY.classList.add("text-slate-400");
+                inputY.placeholder = "0";
+            }
+        }
+
+        // --- Initialization ---
+
+        function resize() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            
+            gameState.width = canvas.width;
+            gameState.height = canvas.height;
+            gameState.originX = Math.floor(gameState.width * 0.1); 
+            gameState.originY = Math.floor(gameState.height * 0.82); 
+            gameState.gridSize = Math.max(Math.floor(gameState.width / 35), 25);
+        }
+
+        function spawnTarget() {
+            const xMax = Math.floor((gameState.width - gameState.originX) / gameState.gridSize) - 3;
+            const yMax = Math.floor(gameState.originY / gameState.gridSize) - 3;
+            
+            let newX = Math.floor(Math.random() * (xMax - 6)) + 6; 
+            let newY = 0;
+
+            if (groundModeToggle.checked) {
+                newY = 0; 
+            } else {
+                newY = Math.floor(Math.random() * (yMax - 1)) + 1; 
+                if (Math.random() < 0.15) newY = -Math.floor(Math.random() * 3) - 1;
+            }
+
+            gameState.target = { x: newX, y: newY };
+            logEvent(`New Target sighted at (${newX}, ${newY})`, 'info');
+        }
+
+        function init() {
+            window.addEventListener('resize', resize);
+            resize();
+            spawnTarget();
+            gameLoop();
+            setTimeout(() => inputX.focus(), 100);
+            updateInputLabel();
+        }
+
+        // --- Core Logic ---
+
+        function toScreen(x, y) {
+            return {
+                x: gameState.originX + (x * gameState.gridSize),
+                y: gameState.originY - (y * gameState.gridSize) 
+            };
+        }
+
+        function fire() {
+            if (gameState.isFiring) return;
+
+            const valCannonX = parseFloat(inputCannonX.value) || 0;
+            const valX = parseFloat(inputX.value);
+            const valY = parseFloat(inputY.value);
+
+            if (isNaN(valX) || isNaN(valY)) {
+                logEvent("Coordinates required.", "error");
+                return;
+            }
+
+            // Clear old trails when firing
+            gameState.persistentTrails = [];
+            
+            gameState.isFiring = true;
+            gameState.cannonX = valCannonX; // Update cannon pos visually
+            
+            // MATH LOGIC based on MODE
+            let h, k, a;
+
+            // Distance from cannon to target X
+            const dist = valX - valCannonX;
+
+            if (inputModeToggle.checked) {
+                // MANUAL PEAK MODE
+                // Vertex X (h) is midpoint between CannonX and TargetX
+                h = valCannonX + (dist / 2);
+                k = valY;
+
+                logEvent(`Firing Manual Peak: Start=${valCannonX}, Peak=${k}`);
+
+                // Solve for a using Start Point (cannonX, 0)
+                // 0 = a(cannonX - h)^2 + k  => a = -k / (cannonX - h)^2
+                const denom = Math.pow(valCannonX - h, 2);
+                if (denom === 0) a = 0; // Vertical shot or error
+                else a = -k / denom;
+
+            } else {
+                // AUTO-ARC MODE
+                logEvent(`Firing Auto-Arc: Start=${valCannonX} to (${valX}, ${valY})`);
+
+                const midX = valCannonX + (dist / 2);
+                
+                // Heuristic height
+                const autoK = Math.max(0, valY) + Math.abs(dist)/2 + 5; 
+
+                h = midX;
+                k = autoK;
+                if (h === valCannonX) h += 0.1; // avoid div/0
+                
+                // Solve a using Start Point
+                a = -k / Math.pow(valCannonX - h, 2);
+            }
+            
+            // Update UI
+            vertexDisplay.innerText = `(${h.toFixed(1)}, ${k.toFixed(1)})`;
+            equationDisplay.innerText = `y = ${a.toFixed(3)}(x - ${h.toFixed(1)})² + ${k.toFixed(1)}`;
+            
+            gameState.projectiles.push({
+                startX: valCannonX,
+                targetX: valX, // Intended X
+                targetY: valY, // Intended Y
+                controlH: h, 
+                controlK: k,
+                controlA: a,
+                progress: 0,
+            });
+        }
+
+        function checkHit(gridX, gridY) {
+            const dist = Math.sqrt(Math.pow(gridX - gameState.target.x, 2) + Math.pow(gridY - gameState.target.y, 2));
+            
+            if (dist < 0.6) { 
+                gameState.score += 100 + (gameState.streak * 25);
+                gameState.streak++;
+                scoreDisplay.innerText = gameState.score;
+                streakDisplay.innerText = gameState.streak;
+                
+                logEvent(`HIT! Target destroyed.`, 'success');
+                addExplosion(toScreen(gameState.target.x, gameState.target.y), true);
+                gameState.craters = []; 
+                
+                setTimeout(() => {
+                    spawnTarget();
+                    gameState.isFiring = false;
+                }, 2000);
+
+            } else {
+                gameState.streak = 0;
+                streakDisplay.innerText = 0;
+                
+                let diffX = gameState.target.x - gridX;
+                logEvent(`Missed. Impact at (${gridX.toFixed(1)}, ${gridY.toFixed(1)}).`, 'warning');
+
+                addExplosion(toScreen(gridX, gridY), false);
+                gameState.craters.push({x: gridX, y: gridY});
+                gameState.isFiring = false;
+            }
+        }
+
+        function addExplosion(pos, isBig) {
+            gameState.explosions.push({
+                x: pos.x,
+                y: pos.y,
+                radius: 1,
+                maxRadius: isBig ? 100 : 30,
+                alpha: 1,
+                color: isBig ? '#ef4444' : '#f59e0b',
+                type: isBig ? 'target' : 'dust'
+            });
+        }
+
+        // --- Rendering ---
+
+        function drawBackground() {
+            const grad = ctx.createLinearGradient(0, 0, 0, gameState.height);
+            grad.addColorStop(0, COLORS.skyTop);
+            grad.addColorStop(0.65, COLORS.skyBottom);
+            grad.addColorStop(0.65, COLORS.ground); 
+            grad.addColorStop(1, COLORS.groundDark);
+            
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, gameState.width, gameState.height);
+
+            const groundY = gameState.originY;
+            ctx.fillStyle = COLORS.ground;
+            ctx.fillRect(0, groundY, gameState.width, gameState.height - groundY);
+            
+            ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+            ctx.beginPath();
+            for(let i=0; i<gameState.width; i+=15) {
+                let h = Math.random() * 8 + 4;
+                ctx.moveTo(i, groundY);
+                ctx.lineTo(i + 3, groundY - h); 
+            }
+            ctx.stroke();
+        }
+
+        function drawGrid() {
+            ctx.lineWidth = 1;
+            ctx.font = "12px JetBrains Mono";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            const xRangeStart = -Math.floor(gameState.originX / gameState.gridSize) - 1;
+            const xRangeEnd = Math.floor((gameState.width - gameState.originX) / gameState.gridSize) + 1;
+            const yRangeStart = -Math.floor((gameState.height - gameState.originY) / gameState.gridSize) - 1;
+            const yRangeEnd = Math.floor(gameState.originY / gameState.gridSize) + 1;
+
+            for (let i = xRangeStart; i <= xRangeEnd; i++) {
+                const x = gameState.originX + (i * gameState.gridSize);
+                
+                ctx.strokeStyle = i === 0 ? COLORS.axis : COLORS.grid;
+                ctx.lineWidth = i === 0 ? 2 : 1;
+                
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, gameState.height);
+                ctx.stroke();
+
+                if (i !== 0 && i % 2 === 0) { 
+                    ctx.fillStyle = COLORS.text;
+                    ctx.fillText(i, x, gameState.originY + 18);
+                }
+            }
+
+            for (let j = yRangeStart; j <= yRangeEnd; j++) {
+                const y = gameState.originY - (j * gameState.gridSize);
+                
+                ctx.strokeStyle = j === 0 ? COLORS.axis : COLORS.grid;
+                ctx.lineWidth = j === 0 ? 2 : 1;
+
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(gameState.width, y);
+                ctx.stroke();
+
+                if (j !== 0 && j % 2 === 0) {
+                    ctx.fillStyle = COLORS.text;
+                    ctx.fillText(j, gameState.originX - 18, y);
+                }
+            }
+            
+            // Origin Dot (0,0)
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.arc(gameState.originX, gameState.originY, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawEntities() {
+            // Craters
+            gameState.craters.forEach(crater => {
+                const pos = toScreen(crater.x, crater.y);
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(pos.x, pos.y, gameState.gridSize * 0.3, gameState.gridSize * 0.15, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.font = "10px sans-serif";
+                ctx.fillText("X", pos.x, pos.y + 3);
+            });
+
+            // --- TARGET ---
+            const targetPos = toScreen(gameState.target.x, gameState.target.y);
+            const scale = gameState.gridSize / 40; 
+
+            // Stand
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(targetPos.x - 2*scale, targetPos.y, 4*scale, 20*scale); 
+            ctx.fillRect(targetPos.x - 10*scale, targetPos.y + 18*scale, 20*scale, 4*scale); 
+
+            // Rings
+            const r1 = 16 * scale;
+            const r2 = 10 * scale;
+            const r3 = 4 * scale;
+
+            ctx.beginPath(); ctx.arc(targetPos.x, targetPos.y, r1, 0, Math.PI*2); 
+            ctx.fillStyle = '#ef4444'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle='#fff'; ctx.stroke();
+            ctx.beginPath(); ctx.arc(targetPos.x, targetPos.y, r2, 0, Math.PI*2); 
+            ctx.fillStyle = '#fff'; ctx.fill();
+            ctx.beginPath(); ctx.arc(targetPos.x, targetPos.y, r3, 0, Math.PI*2); 
+            ctx.fillStyle = '#ef4444'; ctx.fill();
+
+            // Label (Conditionally Hidden)
+            if (showCoordsToggle.checked) {
+                ctx.fillStyle = '#ef4444';
+                ctx.font = "bold 12px sans-serif";
+                ctx.fillText(`(${gameState.target.x}, ${gameState.target.y})`, targetPos.x, targetPos.y - 25*scale);
+            }
+
+
+            // --- CANNON (Now Adjustable) ---
+            const currentCannonX = parseFloat(inputCannonX.value) || 0;
+            const cannonScreenPos = toScreen(currentCannonX, 0);
+            const cx = cannonScreenPos.x;
+            const cy = cannonScreenPos.y;
+            const cannonScale = gameState.gridSize / 40;
+
+            // Cannon Label
+            if (currentCannonX !== 0) {
+                ctx.fillStyle = '#3b82f6';
+                ctx.font = "bold 12px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(`(${currentCannonX}, 0)`, cx, cy + 25);
+            }
+
+            // Wheels
+            ctx.fillStyle = '#1e293b'; 
+            ctx.beginPath(); ctx.arc(cx, cy - 5*cannonScale, 12*cannonScale, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#475569'; 
+            ctx.beginPath(); ctx.arc(cx, cy - 5*cannonScale, 4*cannonScale, 0, Math.PI*2); ctx.fill();
+
+            // Spokes
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx - 12*cannonScale, cy - 5*cannonScale);
+            ctx.lineTo(cx + 12*cannonScale, cy - 5*cannonScale);
+            ctx.moveTo(cx, cy - 17*cannonScale);
+            ctx.lineTo(cx, cy + 7*cannonScale);
+            ctx.stroke();
+
+            // Gun Barrel
+            ctx.save();
+            ctx.translate(cx, cy - 10*cannonScale);
+            ctx.rotate(-Math.PI / 4); 
+            ctx.fillStyle = '#334155'; ctx.fillRect(-10*cannonScale, -8*cannonScale, 20*cannonScale, 16*cannonScale);
+            ctx.fillStyle = '#1e293b'; ctx.fillRect(0, -5*cannonScale, 40*cannonScale, 10*cannonScale);
+            ctx.fillStyle = '#0f172a'; ctx.fillRect(38*cannonScale, -6*cannonScale, 4*cannonScale, 12*cannonScale);
+            ctx.restore();
+        }
+
+        // New function to draw old trails
+        function drawPersistentTrails() {
+            if (gameState.persistentTrails.length === 0) return;
+
+            gameState.persistentTrails.forEach(trail => {
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(100, 116, 139, 0.4)'; // Faded blue-grey
+                ctx.setLineDash([5, 5]);
+                ctx.lineWidth = 2;
+
+                // Draw curve based on saved params
+                const startX = trail.startX;
+                const endX = trail.endX; // This is the impact point stored
+                
+                // We need to trace from startX to endX
+                // Use a loop to reconstruct points
+                let started = false;
+                const step = (endX - startX) / 100;
+                
+                for(let gx = startX; (step>0 ? gx<=endX : gx>=endX); gx+=step) {
+                    let gy = 0;
+                    if (trail.a !== 0) {
+                        gy = trail.a * Math.pow(gx - trail.h, 2) + trail.k;
+                    }
+                    const sPos = toScreen(gx, gy);
+                    if (!started) { ctx.moveTo(sPos.x, sPos.y); started=true; }
+                    else { ctx.lineTo(sPos.x, sPos.y); }
+                }
+                
+                ctx.stroke();
+                ctx.setLineDash([]);
+            });
+        }
+
+        function updateAndDrawProjectiles() {
+            drawPersistentTrails(); // Draw old ones first
+
+            for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
+                const p = gameState.projectiles[i];
+                p.progress += 0.004;
+
+                // Calculate X based on progress relative to distance
+                // Total distance to cover roughly:
+                const dist = p.targetX - p.startX;
+                const currentGridX = p.startX + (dist * p.progress * 1.1); // 1.1 overshoot
+                
+                let currentGridY = 0;
+                if (p.controlA === 0) {
+                     currentGridY = 0;
+                } else {
+                     currentGridY = p.controlA * Math.pow(currentGridX - p.controlH, 2) + p.controlK;
+                }
+
+                // Stop conditions
+                const hitGround = currentGridY < -2;
+                const finished = p.progress >= 1.0;
+
+                if (finished || hitGround) {
+                    // Save trail before removing
+                    gameState.persistentTrails.push({
+                        startX: p.startX,
+                        endX: currentGridX,
+                        h: p.controlH,
+                        k: p.controlK,
+                        a: p.controlA
+                    });
+
+                    checkHit(currentGridX, currentGridY);
+                    gameState.projectiles.splice(i, 1);
+                    continue;
+                }
+
+                // Mid-air check
+                const distToTarget = Math.sqrt(Math.pow(currentGridX - gameState.target.x, 2) + Math.pow(currentGridY - gameState.target.y, 2));
+                if (distToTarget < 0.6) {
+                    // Save trail
+                    gameState.persistentTrails.push({
+                        startX: p.startX,
+                        endX: currentGridX,
+                        h: p.controlH,
+                        k: p.controlK,
+                        a: p.controlA
+                    });
+
+                    checkHit(currentGridX, currentGridY);
+                    gameState.projectiles.splice(i, 1);
+                    continue;
+                }
+
+                // Draw Current Trail
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(30, 41, 59, 0.6)'; 
+                ctx.setLineDash([4, 4]);
+                ctx.lineWidth = 2;
+                
+                // To draw smooth trail, we iterate from 0 to current progress
+                let currentPos = {x:0, y:0};
+                const totalDist = p.targetX - p.startX;
+                
+                const startScreen = toScreen(p.startX, 0); // Approx start
+                ctx.moveTo(startScreen.x, startScreen.y);
+
+                for(let t=0; t<=p.progress; t+=0.01) {
+                   const gx = p.startX + (totalDist * t * 1.1);
+                   let gy = 0;
+                   if (p.controlA !== 0) {
+                        gy = p.controlA * Math.pow(gx - p.controlH, 2) + p.controlK;
+                   }
+                   const screenP = toScreen(gx, gy);
+                   ctx.lineTo(screenP.x, screenP.y);
+                   currentPos = screenP;
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Draw Projectile
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(currentPos.x, currentPos.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function updateAndDrawExplosions() {
+            for (let i = gameState.explosions.length - 1; i >= 0; i--) {
+                const ex = gameState.explosions[i];
+                ex.radius += 1.5;
+                ex.alpha -= 0.03;
+
+                if (ex.alpha <= 0) {
+                    gameState.explosions.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = ex.alpha;
+                ctx.fillStyle = ex.color;
+                ctx.beginPath();
+                ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
+                ctx.fill();
+                if (ex.type === 'target') {
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.arc(ex.x, ex.y, ex.radius * 0.8, 0, Math.PI * 2); ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+
+        function gameLoop() {
+            drawBackground();
+            drawGrid();
+            drawEntities();
+            updateAndDrawProjectiles();
+            updateAndDrawExplosions();
+            requestAnimationFrame(gameLoop);
+        }
+
+        fireBtn.addEventListener('click', fire);
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') fire();
+        });
+        
+        groundModeToggle.addEventListener('change', () => { spawnTarget(); });
+        inputModeToggle.addEventListener('change', updateInputLabel);
+        
+        // Handle Settings Drawer Toggle
+        let isDrawerOpen = false;
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent immediate closing
+            isDrawerOpen = !isDrawerOpen;
+            if (isDrawerOpen) {
+                settingsDrawer.classList.remove('scale-0', 'opacity-0', 'pointer-events-none');
+                settingsDrawer.classList.add('scale-100', 'opacity-100', 'pointer-events-auto');
+            } else {
+                settingsDrawer.classList.add('scale-0', 'opacity-0', 'pointer-events-none');
+                settingsDrawer.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto');
+            }
+        });
+
+        // Close drawer when clicking outside
+        document.addEventListener('click', (e) => {
+            if (isDrawerOpen && !settingsDrawer.contains(e.target) && e.target !== settingsBtn) {
+                isDrawerOpen = false;
+                settingsDrawer.classList.add('scale-0', 'opacity-0', 'pointer-events-none');
+                settingsDrawer.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto');
+            }
+        });
+
+        // Live update cannon visual on input change
+        inputCannonX.addEventListener('input', () => {
+             gameState.cannonX = parseFloat(inputCannonX.value) || 0;
+        });
+
+        init();
+
+    </script>
+</body>
+</html>

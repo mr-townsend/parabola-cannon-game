@@ -51,6 +51,11 @@
             background-color: #3b82f6;
             border-color: #3b82f6;
         }
+
+        /* Custom input width for formula fields */
+        .w-formula {
+            width: 4rem;
+        }
     </style>
 </head>
 <body class="h-screen w-screen flex bg-slate-900">
@@ -82,7 +87,7 @@
                     <div class="text-left space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6">
                         <p class="text-slate-700 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">1</span> Set <span class="text-blue-600 font-bold">Cannon X</span> position.</p>
                         <p class="text-slate-700 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">2</span> Locate the <span class="text-red-500 font-bold">Target</span>.</p>
-                        <p class="text-slate-700 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">3</span> Input <span class="font-bold">Target X</span> and <span class="font-bold">Height/Y</span>.</p>
+                        <p class="text-slate-700 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">3</span> Enter Values or <span class="text-emerald-600 font-bold">Formula</span>.</p>
                         <p class="text-slate-700 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">4</span> Fire and analyze the path.</p>
                     </div>
                     
@@ -97,14 +102,14 @@
         <div class="h-28 bg-slate-800 border-t border-slate-700 flex items-center justify-between px-6 z-20 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.3)] shrink-0">
             
             <div class="flex items-center gap-6">
-                <!-- Cannon Pos -->
+                <!-- Cannon Pos (Always Visible) -->
                 <div class="flex flex-col relative border-r border-slate-600 pr-6 mr-2">
                     <label class="text-[10px] text-blue-400 font-bold uppercase mb-1 ml-1">Cannon X</label>
                     <input type="number" id="inputCannonX" placeholder="0" value="0" class="input-glow w-20 bg-slate-900 border-2 border-blue-500/50 rounded-lg py-2 px-3 text-center text-lg font-bold text-white placeholder-slate-600 appearance-none">
                 </div>
 
-                <!-- Inputs -->
-                <div class="flex gap-4 items-end">
+                <!-- STANDARD CONTROLS -->
+                <div id="standardControls" class="flex gap-4 items-end">
                     <div class="flex flex-col relative">
                         <label class="text-[10px] text-slate-400 font-bold uppercase mb-1 ml-1">Target X</label>
                         <input type="number" id="inputX" placeholder="0" value="0" class="input-glow w-24 bg-slate-900 border-2 border-slate-600 rounded-lg py-2 px-3 text-center text-lg font-bold text-white placeholder-slate-600 appearance-none">
@@ -114,11 +119,30 @@
                         <label id="labelY" class="text-[10px] text-slate-400 font-bold uppercase mb-1 ml-1">Target Y</label>
                         <input type="number" id="inputY" placeholder="0" value="0" class="input-glow w-24 bg-slate-900 border-2 border-slate-600 rounded-lg py-2 px-3 text-center text-lg font-bold text-white placeholder-slate-600 appearance-none">
                     </div>
-
-                    <button id="fireBtn" class="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-blue-900/50 transition-all transform hover:scale-105 active:scale-95 h-[50px] flex items-center border border-blue-400/30">
-                        FIRE
-                    </button>
                 </div>
+
+                <!-- FORMULA CONTROLS (Hidden by default) -->
+                <div id="formulaControls" class="hidden gap-2 items-center text-slate-300 font-bold text-xl font-mono bg-slate-900/50 p-2 rounded-xl border border-slate-600/50">
+                    <span class="text-emerald-400">y =</span>
+                    <div class="flex flex-col relative">
+                         <label class="text-[8px] text-emerald-400 absolute -top-3 left-1">a (width)</label>
+                         <input type="number" id="inputA" placeholder="-0.1" class="input-glow w-20 bg-slate-900 border-2 border-slate-600 rounded-lg py-1 px-2 text-center text-lg font-bold text-white placeholder-slate-600 appearance-none">
+                    </div>
+                    <span>(x - </span>
+                    <div class="flex flex-col relative">
+                        <label class="text-[8px] text-emerald-400 absolute -top-3 left-1">h (vertex x)</label>
+                        <input type="number" id="inputH" placeholder="0" class="input-glow w-20 bg-slate-900 border-2 border-slate-600 rounded-lg py-1 px-2 text-center text-lg font-bold text-white placeholder-slate-600 appearance-none">
+                    </div>
+                    <span>)² + </span>
+                    <div class="flex flex-col relative">
+                        <label class="text-[8px] text-emerald-400 absolute -top-3 left-1">k (vertex y)</label>
+                        <input type="number" id="inputK" placeholder="0" class="input-glow w-20 bg-slate-900 border-2 border-slate-600 rounded-lg py-1 px-2 text-center text-lg font-bold text-white placeholder-slate-600 appearance-none">
+                    </div>
+                </div>
+
+                <button id="fireBtn" class="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-blue-900/50 transition-all transform hover:scale-105 active:scale-95 h-[50px] flex items-center border border-blue-400/30 ml-2">
+                    FIRE
+                </button>
             </div>
 
             <!-- Settings Button & Drawer -->
@@ -131,11 +155,19 @@
                 <div id="settingsDrawer" class="absolute bottom-[calc(100%+12px)] right-0 bg-slate-800 border border-slate-600 p-5 rounded-xl shadow-2xl flex flex-col gap-4 min-w-[240px] transition-all transform origin-bottom-right scale-0 opacity-0 pointer-events-none z-50">
                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-700 pb-2">Mission Settings</h3>
                     
-                    <!-- Input Mode Toggle -->
-                    <label class="flex items-center justify-between cursor-pointer gap-3 group" title="Toggle between Target Y and Vertex Height input">
-                        <span class="text-xs font-bold text-slate-300 uppercase group-hover:text-amber-400 transition-colors">Manual Peak Mode</span>
-                        <input type="checkbox" id="inputModeToggle" class="w-5 h-5 accent-amber-500 rounded cursor-pointer toggle-checkbox bg-slate-700 border-slate-500" checked>
+                    <!-- Formula Mode Toggle -->
+                    <label class="flex items-center justify-between cursor-pointer gap-3 group bg-slate-700/50 p-2 rounded-lg" title="Manipulate the equation directly">
+                        <span class="text-xs font-bold text-slate-200 uppercase group-hover:text-emerald-400 transition-colors">Formula Mode</span>
+                        <input type="checkbox" id="formulaModeToggle" class="w-5 h-5 accent-emerald-500 rounded cursor-pointer toggle-checkbox bg-slate-700 border-slate-500">
                     </label>
+
+                    <div id="standardSettings" class="flex flex-col gap-4">
+                        <!-- Input Mode Toggle -->
+                        <label class="flex items-center justify-between cursor-pointer gap-3 group" title="Toggle between Target Y and Vertex Height input">
+                            <span class="text-xs font-bold text-slate-300 uppercase group-hover:text-amber-400 transition-colors">Manual Peak Mode</span>
+                            <input type="checkbox" id="inputModeToggle" class="w-5 h-5 accent-amber-500 rounded cursor-pointer toggle-checkbox bg-slate-700 border-slate-500" checked>
+                        </label>
+                    </div>
 
                     <!-- Ground Mode Toggle -->
                     <label class="flex items-center justify-between cursor-pointer gap-3 group" title="Target always at Y=0">
@@ -200,9 +232,9 @@
 
     <script>
         /**
-         * Parabola Cannon: Outdoor Edition v7
-         * - Settings Drawer added (Bottom right)
-         * - All defaults reset to 0
+         * Parabola Cannon: Outdoor Edition v9
+         * - Fix: Robust animation speed (constant speed)
+         * - Fix: Safe Formula mode behavior (directionality, infinite loops)
          */
 
         const canvas = document.getElementById('gameCanvas');
@@ -210,9 +242,20 @@
         
         // UI Elements
         const inputCannonX = document.getElementById('inputCannonX');
+        const standardControls = document.getElementById('standardControls');
+        const formulaControls = document.getElementById('formulaControls');
+        const standardSettings = document.getElementById('standardSettings');
+        
+        // Standard Inputs
         const inputX = document.getElementById('inputX');
         const inputY = document.getElementById('inputY');
         const labelY = document.getElementById('labelY');
+        
+        // Formula Inputs
+        const inputA = document.getElementById('inputA');
+        const inputH = document.getElementById('inputH');
+        const inputK = document.getElementById('inputK');
+
         const fireBtn = document.getElementById('fireBtn');
         const settingsBtn = document.getElementById('settingsBtn');
         const settingsDrawer = document.getElementById('settingsDrawer');
@@ -221,9 +264,12 @@
         const vertexDisplay = document.getElementById('vertexDisplay');
         const equationDisplay = document.getElementById('equationDisplay');
         const logContainer = document.getElementById('logContainer');
+        
+        // Toggles
         const groundModeToggle = document.getElementById('groundModeToggle');
         const inputModeToggle = document.getElementById('inputModeToggle');
         const showCoordsToggle = document.getElementById('showCoordsToggle');
+        const formulaModeToggle = document.getElementById('formulaModeToggle');
 
         // Game State
         let gameState = {
@@ -273,7 +319,23 @@
             }
         }
 
-        function updateInputLabel() {
+        function updateUIModes() {
+            // Formula Mode Logic
+            if (formulaModeToggle.checked) {
+                standardControls.classList.add('hidden');
+                formulaControls.classList.remove('hidden');
+                formulaControls.classList.add('flex');
+                
+                standardSettings.classList.add('opacity-50', 'pointer-events-none');
+            } else {
+                standardControls.classList.remove('hidden');
+                formulaControls.classList.add('hidden');
+                formulaControls.classList.remove('flex');
+                
+                standardSettings.classList.remove('opacity-50', 'pointer-events-none');
+            }
+
+            // Input Mode Label Logic (Standard Only)
             if (inputModeToggle.checked) {
                 labelY.textContent = "Peak Height (k)";
                 labelY.classList.add("text-amber-500");
@@ -325,7 +387,7 @@
             spawnTarget();
             gameLoop();
             setTimeout(() => inputX.focus(), 100);
-            updateInputLabel();
+            updateUIModes();
         }
 
         // --- Core Logic ---
@@ -341,55 +403,69 @@
             if (gameState.isFiring) return;
 
             const valCannonX = parseFloat(inputCannonX.value) || 0;
-            const valX = parseFloat(inputX.value);
-            const valY = parseFloat(inputY.value);
-
-            if (isNaN(valX) || isNaN(valY)) {
-                logEvent("Coordinates required.", "error");
-                return;
-            }
-
-            // Clear old trails when firing
-            gameState.persistentTrails = [];
             
             gameState.isFiring = true;
-            gameState.cannonX = valCannonX; // Update cannon pos visually
+            gameState.cannonX = valCannonX; 
             
-            // MATH LOGIC based on MODE
+            gameState.persistentTrails = [];
+
             let h, k, a;
 
-            // Distance from cannon to target X
-            const dist = valX - valCannonX;
+            if (formulaModeToggle.checked) {
+                // --- FORMULA MODE ---
+                const rawA = inputA.value === "" ? -0.1 : parseFloat(inputA.value);
+                const rawH = inputH.value === "" ? 0 : parseFloat(inputH.value);
+                const rawK = inputK.value === "" ? 0 : parseFloat(inputK.value);
 
-            if (inputModeToggle.checked) {
-                // MANUAL PEAK MODE
-                // Vertex X (h) is midpoint between CannonX and TargetX
-                h = valCannonX + (dist / 2);
-                k = valY;
+                a = rawA;
+                h = rawH;
+                k = rawK;
 
-                logEvent(`Firing Manual Peak: Start=${valCannonX}, Peak=${k}`);
+                // Safeguard against a=0 (Linear)
+                if (a === 0) {
+                    a = 0.00001; // Avoid pure linear
+                    logEvent("Warning: 'a' cannot be 0. Corrected to small value.", 'warning');
+                }
 
-                // Solve for a using Start Point (cannonX, 0)
-                // 0 = a(cannonX - h)^2 + k  => a = -k / (cannonX - h)^2
-                const denom = Math.pow(valCannonX - h, 2);
-                if (denom === 0) a = 0; // Vertical shot or error
-                else a = -k / denom;
+                logEvent(`Firing Formula: y = ${a}(x - ${h})² + ${k}`);
+
+                // Teachable Moment Check: Start point
+                const startY = a * Math.pow(valCannonX - h, 2) + k;
+                if (startY < -1.5) {
+                    logEvent(`Misfire: Projectile starts underground (y=${startY.toFixed(1)})`, 'error');
+                } else if (Math.abs(startY) > 0.5) {
+                    logEvent(`Note: Starts at Y=${startY.toFixed(1)}`, 'warning');
+                }
 
             } else {
-                // AUTO-ARC MODE
-                logEvent(`Firing Auto-Arc: Start=${valCannonX} to (${valX}, ${valY})`);
+                // --- STANDARD MODE ---
+                const valX = parseFloat(inputX.value);
+                const valY = parseFloat(inputY.value);
 
-                const midX = valCannonX + (dist / 2);
+                if (isNaN(valX) || isNaN(valY)) {
+                    logEvent("Coordinates required.", "error");
+                    gameState.isFiring = false;
+                    return;
+                }
                 
-                // Heuristic height
-                const autoK = Math.max(0, valY) + Math.abs(dist)/2 + 5; 
+                const dist = valX - valCannonX;
 
-                h = midX;
-                k = autoK;
-                if (h === valCannonX) h += 0.1; // avoid div/0
-                
-                // Solve a using Start Point
-                a = -k / Math.pow(valCannonX - h, 2);
+                if (inputModeToggle.checked) {
+                    h = valCannonX + (dist / 2);
+                    k = valY;
+                    logEvent(`Firing Manual Peak: Start=${valCannonX}, Peak=${k}`);
+                    const denom = Math.pow(valCannonX - h, 2);
+                    a = denom === 0 ? 0 : -k / denom;
+
+                } else {
+                    logEvent(`Firing Auto-Arc: Start=${valCannonX} to (${valX}, ${valY})`);
+                    const midX = valCannonX + (dist / 2);
+                    const autoK = Math.max(0, valY) + Math.abs(dist)/2 + 5; 
+                    h = midX;
+                    k = autoK;
+                    if (h === valCannonX) h += 0.1; 
+                    a = -k / Math.pow(valCannonX - h, 2);
+                }
             }
             
             // Update UI
@@ -398,19 +474,17 @@
             
             gameState.projectiles.push({
                 startX: valCannonX,
-                targetX: valX, // Intended X
-                targetY: valY, // Intended Y
+                currentGridX: valCannonX, // Start at cannon X
                 controlH: h, 
                 controlK: k,
                 controlA: a,
-                progress: 0,
             });
         }
 
         function checkHit(gridX, gridY) {
             const dist = Math.sqrt(Math.pow(gridX - gameState.target.x, 2) + Math.pow(gridY - gameState.target.y, 2));
             
-            if (dist < 0.6) { 
+            if (dist < 0.8) { // Hitbox size
                 gameState.score += 100 + (gameState.streak * 25);
                 gameState.streak++;
                 scoreDisplay.innerText = gameState.score;
@@ -622,14 +696,12 @@
                 ctx.setLineDash([5, 5]);
                 ctx.lineWidth = 2;
 
-                // Draw curve based on saved params
                 const startX = trail.startX;
-                const endX = trail.endX; // This is the impact point stored
+                const endX = trail.endX; 
                 
-                // We need to trace from startX to endX
-                // Use a loop to reconstruct points
                 let started = false;
-                const step = (endX - startX) / 100;
+                // Determine direction
+                const step = (endX >= startX) ? 0.2 : -0.2;
                 
                 for(let gx = startX; (step>0 ? gx<=endX : gx>=endX); gx+=step) {
                     let gy = 0;
@@ -647,56 +719,55 @@
         }
 
         function updateAndDrawProjectiles() {
-            drawPersistentTrails(); // Draw old ones first
+            drawPersistentTrails(); 
 
             for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
                 const p = gameState.projectiles[i];
-                p.progress += 0.004;
-
-                // Calculate X based on progress relative to distance
-                // Total distance to cover roughly:
-                const dist = p.targetX - p.startX;
-                const currentGridX = p.startX + (dist * p.progress * 1.1); // 1.1 overshoot
+                
+                // --- NEW PHYSICS LOOP ---
+                // Move constant speed in grid units per frame (0.25)
+                const speed = 0.25; 
+                p.currentGridX += speed; 
                 
                 let currentGridY = 0;
                 if (p.controlA === 0) {
                      currentGridY = 0;
                 } else {
-                     currentGridY = p.controlA * Math.pow(currentGridX - p.controlH, 2) + p.controlK;
+                     currentGridY = p.controlA * Math.pow(p.currentGridX - p.controlH, 2) + p.controlK;
                 }
 
                 // Stop conditions
                 const hitGround = currentGridY < -2;
-                const finished = p.progress >= 1.0;
+                const farOffScreen = p.currentGridX > (gameState.width/gameState.gridSize) + 50; // Safety cull
+                const deepUnderground = currentGridY < -50; 
 
-                if (finished || hitGround) {
-                    // Save trail before removing
+                if (hitGround || farOffScreen || deepUnderground) {
                     gameState.persistentTrails.push({
                         startX: p.startX,
-                        endX: currentGridX,
+                        endX: p.currentGridX,
                         h: p.controlH,
                         k: p.controlK,
                         a: p.controlA
                     });
 
-                    checkHit(currentGridX, currentGridY);
+                    // Only check hit if we actually hit ground near target or passed it
+                    checkHit(p.currentGridX, currentGridY);
                     gameState.projectiles.splice(i, 1);
                     continue;
                 }
 
-                // Mid-air check
-                const distToTarget = Math.sqrt(Math.pow(currentGridX - gameState.target.x, 2) + Math.pow(currentGridY - gameState.target.y, 2));
+                // Mid-air check (Target hit)
+                const distToTarget = Math.sqrt(Math.pow(p.currentGridX - gameState.target.x, 2) + Math.pow(currentGridY - gameState.target.y, 2));
                 if (distToTarget < 0.6) {
-                    // Save trail
                     gameState.persistentTrails.push({
                         startX: p.startX,
-                        endX: currentGridX,
+                        endX: p.currentGridX,
                         h: p.controlH,
                         k: p.controlK,
                         a: p.controlA
                     });
 
-                    checkHit(currentGridX, currentGridY);
+                    checkHit(p.currentGridX, currentGridY);
                     gameState.projectiles.splice(i, 1);
                     continue;
                 }
@@ -707,30 +778,31 @@
                 ctx.setLineDash([4, 4]);
                 ctx.lineWidth = 2;
                 
-                // To draw smooth trail, we iterate from 0 to current progress
-                let currentPos = {x:0, y:0};
-                const totalDist = p.targetX - p.startX;
-                
-                const startScreen = toScreen(p.startX, 0); // Approx start
+                // Trace from Start to Current
+                const startY = p.controlA * Math.pow(p.startX - p.controlH, 2) + p.controlK;
+                const startScreen = toScreen(p.startX, startY);
                 ctx.moveTo(startScreen.x, startScreen.y);
 
-                for(let t=0; t<=p.progress; t+=0.01) {
-                   const gx = p.startX + (totalDist * t * 1.1);
+                // Sample points for smooth curve
+                for(let gx = p.startX; gx <= p.currentGridX; gx+=0.2) {
                    let gy = 0;
                    if (p.controlA !== 0) {
                         gy = p.controlA * Math.pow(gx - p.controlH, 2) + p.controlK;
                    }
                    const screenP = toScreen(gx, gy);
                    ctx.lineTo(screenP.x, screenP.y);
-                   currentPos = screenP;
                 }
+                // Connect to exact current pos
+                const finalPos = toScreen(p.currentGridX, currentGridY);
+                ctx.lineTo(finalPos.x, finalPos.y);
+                
                 ctx.stroke();
                 ctx.setLineDash([]);
                 
                 // Draw Projectile
                 ctx.fillStyle = '#000';
                 ctx.beginPath();
-                ctx.arc(currentPos.x, currentPos.y, 5, 0, Math.PI * 2);
+                ctx.arc(finalPos.x, finalPos.y, 5, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -775,7 +847,8 @@
         });
         
         groundModeToggle.addEventListener('change', () => { spawnTarget(); });
-        inputModeToggle.addEventListener('change', updateInputLabel);
+        inputModeToggle.addEventListener('change', updateUIModes);
+        formulaModeToggle.addEventListener('change', updateUIModes);
         
         // Handle Settings Drawer Toggle
         let isDrawerOpen = false;

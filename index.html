@@ -58,6 +58,8 @@
         }
         .heart-icon { color: #ef4444; display: inline-block; transition: all 0.3s; }
         .heart-lost { color: #94a3b8; transform: scale(0.8); opacity: 0.5; }
+        
+        .disabled-control { opacity: 0.5; pointer-events: none; filter: grayscale(100%); }
     </style>
 </head>
 <body class="h-full w-full flex bg-slate-900">
@@ -82,7 +84,7 @@
             <button onclick="startGame('computer')" class="group relative overflow-hidden rounded-3xl bg-slate-800 border-2 border-slate-700 hover:border-amber-500 transition-all duration-300 p-6 text-left hover:shadow-[0_0_30px_rgba(245,158,11,0.3)]">
                 <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><svg class="w-24 h-24 text-amber-500" fill="currentColor" viewBox="0 0 24 24"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H3V4h18v12z"/><path d="M10 15l5-3-5-3v6z"/></svg></div>
                 <h2 class="text-2xl font-bold text-white mb-2 group-hover:text-amber-400">Vs Computer</h2>
-                <p class="text-slate-400 text-sm mb-6">Survival mode. The AI fires back if you miss. You have 3 hearts.</p>
+                <p class="text-slate-400 text-sm mb-6">Survival mode. The AI relocates and fires back. 3 Hearts each.</p>
                 <span class="inline-block bg-amber-600/20 text-amber-400 font-bold py-2 px-4 rounded-lg group-hover:bg-amber-600 group-hover:text-white transition-colors text-sm">Battle AI</span>
             </button>
 
@@ -116,20 +118,27 @@
         <!-- Game Canvas Container -->
         <div class="relative flex-grow bg-slate-900 overflow-hidden">
             <!-- Top HUD -->
-            <div class="absolute top-4 left-4 pointer-events-none z-10 flex gap-4">
-                <div class="glass-panel px-4 py-2 rounded-xl shadow-lg">
+            <div class="absolute top-4 left-4 pointer-events-none z-10 flex gap-4 w-full pr-8">
+                <div class="glass-panel px-4 py-2 rounded-xl shadow-lg flex-shrink-0">
                     <h1 class="text-lg font-bold text-slate-800">PARABOLA CANNON</h1>
                     <p id="modeBadge" class="text-[10px] text-blue-600 font-bold uppercase">Solo Mission</p>
                 </div>
                 <!-- Turn Indicator -->
-                <div id="turnIndicator" class="hidden glass-panel px-4 py-2 rounded-xl shadow-lg border-l-4 border-blue-500 transition-colors">
+                <div id="turnIndicator" class="hidden glass-panel px-4 py-2 rounded-xl shadow-lg border-l-4 border-blue-500 transition-colors flex-shrink-0">
                     <h2 id="turnText" class="text-lg font-bold text-slate-800">Player 1 Turn</h2>
                 </div>
-                <!-- Health Display (Computer Mode) -->
-                <div id="healthDisplay" class="hidden glass-panel px-4 py-2 rounded-xl shadow-lg flex items-center gap-2">
-                    <span class="text-[10px] text-slate-500 font-bold uppercase mr-1">HULL</span>
-                    <div id="heartsContainer" class="flex gap-1 text-xl">
-                        <span class="heart-icon">♥</span><span class="heart-icon">♥</span><span class="heart-icon">♥</span>
+                
+                <!-- Health Displays (Computer Mode) -->
+                <div id="healthWrapper" class="hidden flex gap-4 ml-auto">
+                    <!-- Player Health -->
+                    <div class="glass-panel px-4 py-2 rounded-xl shadow-lg flex items-center gap-2">
+                        <span class="text-[10px] text-blue-600 font-bold uppercase mr-1">YOU</span>
+                        <div id="heartsContainer" class="flex gap-1 text-xl"></div>
+                    </div>
+                    <!-- Enemy Health -->
+                    <div class="glass-panel px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 border-l-4 border-amber-500">
+                        <span class="text-[10px] text-amber-600 font-bold uppercase mr-1">ENEMY</span>
+                        <div id="enemyHeartsContainer" class="flex gap-1 text-xl"></div>
                     </div>
                 </div>
             </div>
@@ -154,7 +163,7 @@
             
             <div class="flex items-center gap-6">
                 <!-- Cannon Pos -->
-                <div class="flex flex-col relative border-r border-slate-600 pr-6 mr-2">
+                <div id="cannonControlGroup" class="flex flex-col relative border-r border-slate-600 pr-6 mr-2 transition-opacity">
                     <label class="text-[10px] text-blue-400 font-bold uppercase mb-1 ml-1" id="cannonXLabel">Cannon X</label>
                     <div class="flex items-center input-glow bg-slate-900 rounded-lg border-2 border-slate-600 overflow-hidden">
                         <button class="px-2 py-2 text-slate-400 hover:text-white hover:bg-slate-700 active:bg-slate-600 border-r border-slate-600 transition-colors" onclick="stepInput('inputCannonX', -1)">-</button>
@@ -283,11 +292,11 @@
 
     <script>
         /**
-         * Parabola Cannon: Outdoor Edition v19
+         * Parabola Cannon: Outdoor Edition v22
          * Features:
-         * - Mode: Practice, 1v1 Duel, Vs Computer (AI)
-         * - AI: Fires back if you miss.
-         * - Health System: 3 Hearts.
+         * - AI Has 3 Hearts (Game not over until 3 hits)
+         * - AI Relocates after every turn (Dodge logic)
+         * - Turn-based AI battles (Hit or miss, it switches turns)
          */
 
         const canvas = document.getElementById('gameCanvas');
@@ -335,6 +344,7 @@
         // --- UI ---
         const inputCannonX = document.getElementById('inputCannonX');
         const cannonXLabel = document.getElementById('cannonXLabel');
+        const cannonControlGroup = document.getElementById('cannonControlGroup');
         const standardControls = document.getElementById('standardControls');
         const formulaControls = document.getElementById('formulaControls');
         const standardSettings = document.getElementById('standardSettings');
@@ -357,8 +367,9 @@
         const turnIndicator = document.getElementById('turnIndicator');
         const turnText = document.getElementById('turnText');
         const modeBadge = document.getElementById('modeBadge');
-        const healthDisplay = document.getElementById('healthDisplay');
+        const healthWrapper = document.getElementById('healthWrapper');
         const heartsContainer = document.getElementById('heartsContainer');
+        const enemyHeartsContainer = document.getElementById('enemyHeartsContainer');
         
         const groundModeToggle = document.getElementById('groundModeToggle');
         const inputModeToggle = document.getElementById('inputModeToggle');
@@ -372,12 +383,13 @@
 
         // --- STATE ---
         let gameState = {
-            mode: null, // 'practice', 'versus', 'computer'
+            mode: null, 
             turn: 1, 
             width: 0, height: 0, originX: 0, originY: 0, gridSize: 40,
             p1: { x: -10, score: 0 },
             p2: { x: 10, score: 0 },
-            health: 3, // Player health in computer mode
+            health: 3, 
+            aiHealth: 3,
             practiceTarget: { x: 0, y: 0 },
             practiceScore: 0,
             practiceStreak: 0,
@@ -388,16 +400,17 @@
             gameOver: false
         };
 
-        const CONSTANTS = { BARRIER_LIMIT: 4, WIN_SCORE: 5 };
+        const CONSTANTS = { BARRIER_LIMIT: 4, WIN_SCORE: 5, WALL_HEIGHT: 8 };
         const COLORS = {
             skyTop: '#60a5fa', skyBottom: '#bfdbfe', ground: '#4ade80', groundDark: '#22c55e', 
             grid: 'rgba(255,255,255,0.4)', axis: 'rgba(0,0,0,0.6)', text: 'rgba(0,0,0,0.5)',
-            player1: '#3b82f6', player2: '#ef4444', projectile: '#111827', barrier: 'rgba(255, 0, 0, 0.1)', barrierLine: 'rgba(255, 0, 0, 0.4)'
+            player1: '#3b82f6', player2: '#ef4444', projectile: '#111827', barrier: '#475569', barrierLine: '#1e293b'
         };
 
         // --- INPUT STEPPER ---
         window.stepInput = function(id, step) {
             const input = document.getElementById(id);
+            if(input.disabled) return;
             let val = parseFloat(input.value) || 0;
             val += step;
             if (step % 1 !== 0) val = Math.round(val * 10) / 10;
@@ -412,8 +425,10 @@
             document.getElementById('modeSelectScreen').style.display = 'none';
             document.getElementById('instructions').classList.remove('hidden');
             gameOverScreen.classList.add('hidden');
-            healthDisplay.classList.add('hidden');
+            healthWrapper.classList.add('hidden');
             turnIndicator.classList.add('hidden');
+            cannonControlGroup.classList.remove('disabled-control');
+            inputCannonX.disabled = false;
 
             const instrList = document.getElementById('instrList');
             instrList.innerHTML = ''; 
@@ -427,15 +442,20 @@
                 setupMode("1v1 Duel", "text-red-600");
                 gameState.p1.x = -12; gameState.p1.score = 0;
                 gameState.p2.x = 12; gameState.p2.score = 0;
-                instrList.innerHTML = `<p>1. <b>Player 1 (Blue)</b> goes first.</p><p>2. Aim at <b>Player 2 (Red)</b>.</p><p>3. First to 5 points wins!</p>`;
+                instrList.innerHTML = `<p>1. <b>Player 1 (Blue)</b> goes first.</p><p>2. Aim at <b>Player 2 (Red)</b>.</p><p>3. First to 5 points wins!</p><p class="text-red-500 font-bold">WARNING: Center Bunker blocks low shots!</p>`;
                 startTurn(1);
             } else if (mode === 'computer') {
                 setupMode("Vs Computer", "text-amber-500");
-                gameState.p1.x = -10; gameState.p2.x = 12; // Static enemy pos
-                gameState.p1.score = 0; gameState.health = 3;
-                healthDisplay.classList.remove('hidden');
+                gameState.p1.x = -10; gameState.p2.x = 12; 
+                gameState.p1.score = 0; gameState.health = 3; gameState.aiHealth = 3;
+                
+                // Disable cannon move in computer mode
+                cannonControlGroup.classList.add('disabled-control');
+                inputCannonX.disabled = true;
+
+                healthWrapper.classList.remove('hidden');
                 updateHealthUI();
-                instrList.innerHTML = `<p>1. Destroy the <b>Red Enemy</b>.</p><p>2. If you miss, the AI <b>fires back</b>.</p><p>3. You have <b>3 Hearts</b>.</p><p>4. Move your cannon to dodge!</p>`;
+                instrList.innerHTML = `<p>1. Destroy the <b>Red Enemy</b>.</p><p>2. Enemy relocates after every turn!</p><p>3. You have <b>3 Hearts</b>.</p><p class="text-red-500 font-bold">WARNING: Center Bunker blocks low shots!</p>`;
                 startTurn(1);
             }
             initCanvas();
@@ -495,7 +515,8 @@
 
             // Controls
             if (isP1) {
-                inputCannonX.value = gameState.p1.x;
+                // Only update cannon X if enabled
+                if(!inputCannonX.disabled) inputCannonX.value = gameState.p1.x;
                 inputX.value = ''; inputY.value = ''; inputA.value = ''; inputH.value = ''; inputK.value = '';
                 fireBtn.disabled = false;
                 fireBtn.innerText = "FIRE";
@@ -519,32 +540,40 @@
         function computerTurn() {
             if(gameState.gameOver) return;
 
-            // AI Math: Calculate parabola from p2 to p1 with variance
+            // 1. Relocate (Dodge Logic)
+            const minX = CONSTANTS.BARRIER_LIMIT + 2; 
+            const maxX = Math.floor(gameState.width / 2 / gameState.gridSize) - 2;
+            let newX = Math.floor(Math.random() * (maxX - minX + 1)) + minX;
+            // Keep it positive for Player 2 side
+            
+            gameState.p2.x = newX;
+            logEvent(`Enemy relocated to X=${newX}`, "warning");
+
+            // 2. Fire Solution (AI Math)
             const p1 = gameState.p1.x;
-            const p2 = gameState.p2.x;
+            const p2 = gameState.p2.x; // Uses new position
             const variance = (Math.random() - 0.5) * 4; // +/- 2 units error
             const targetX = p1 + variance;
             const startX = p2;
             
-            // Parabola Logic
             const h = (startX + targetX) / 2;
             const dist = Math.abs(startX - targetX);
-            const k = dist / 2 + 5; // Standard high arc
+            const k = dist / 2 + 5; 
             
-            // a = -k / (startX - h)^2 (assuming start Y=0)
             const a = -k / Math.pow(startX - h, 2);
 
-            logEvent("Enemy Fired!", "warning");
-            
-            // Visual equation log
-            equationDisplay.innerHTML = `AI: y = ${a.toFixed(2)}(x - ${h.toFixed(1)})² + ${k.toFixed(1)}`;
+            // Delay shot slightly after move for visual clarity
+            setTimeout(() => {
+                logEvent("Enemy Fired!", "warning");
+                equationDisplay.innerHTML = `AI: y = ${a.toFixed(2)}(x - ${h.toFixed(1)})² + ${k.toFixed(1)}`;
 
-            gameState.isFiring = true;
-            gameState.projectiles.push({
-                cx: startX, cy: 0, vx: (h > startX ? 0.15 : -0.15),
-                a: a, h: h, k: k,
-                owner: 2, trail: []
-            });
+                gameState.isFiring = true;
+                gameState.projectiles.push({
+                    cx: startX, cy: 0, vx: (h > startX ? 0.15 : -0.15),
+                    a: a, h: h, k: k,
+                    owner: 2, trail: []
+                });
+            }, 800);
         }
 
         function updateStatsUI() {
@@ -553,12 +582,12 @@
             } else if (gameState.mode === 'versus') {
                 statsContent.innerHTML = `<div><p class="text-[10px] text-blue-500 uppercase">P1 Score</p><p class="text-2xl font-bold text-blue-400">${gameState.p1.score}</p></div><div><p class="text-[10px] text-red-500 uppercase">P2 Score</p><p class="text-2xl font-bold text-red-400">${gameState.p2.score}</p></div>`;
             } else {
-                // Computer
-                statsContent.innerHTML = `<div><p class="text-[10px] text-blue-500 uppercase">Hits</p><p class="text-2xl font-bold text-blue-400">${gameState.p1.score}</p></div><div><p class="text-[10px] text-slate-500 uppercase">Mode</p><p class="text-lg font-bold text-amber-400">SURVIVAL</p></div>`;
+                statsContent.innerHTML = `<div><p class="text-[10px] text-blue-500 uppercase">Hit Count</p><p class="text-2xl font-bold text-blue-400">${3 - gameState.aiHealth}/3</p></div><div><p class="text-[10px] text-slate-500 uppercase">Mode</p><p class="text-lg font-bold text-amber-400">SURVIVAL</p></div>`;
             }
         }
 
         function updateHealthUI() {
+            // Player
             heartsContainer.innerHTML = '';
             for(let i=0; i<3; i++) {
                 const s = document.createElement('span');
@@ -566,12 +595,22 @@
                 s.innerText = '♥';
                 heartsContainer.appendChild(s);
             }
+            // Enemy
+            enemyHeartsContainer.innerHTML = '';
+            for(let i=0; i<3; i++) {
+                const s = document.createElement('span');
+                s.className = 'heart-icon ' + (i >= gameState.aiHealth ? 'heart-lost' : '');
+                s.innerText = '♥';
+                enemyHeartsContainer.appendChild(s);
+            }
         }
 
-        function logEvent(msg) {
+        function logEvent(msg, type = 'info') {
             const div = document.createElement('div');
             div.textContent = `> ${msg}`;
-            div.className = 'text-slate-300';
+            if (type === 'warning') div.className = 'text-amber-400';
+            else if (type === 'error') div.className = 'text-red-400 font-bold';
+            else div.className = 'text-slate-300';
             logContainer.prepend(div);
         }
 
@@ -587,7 +626,10 @@
             const rangeX = Math.floor((gameState.width/2)/gameState.gridSize) - 2;
             const rangeY = Math.floor((gameState.originY)/gameState.gridSize) - 3;
             let nx = Math.floor(Math.random()*rangeX*2) - rangeX;
-            if(Math.abs(nx) < 3) nx = 5;
+            // Prevent spawning inside wall
+            while(Math.abs(nx) <= 2) {
+                 nx = Math.floor(Math.random()*rangeX*2) - rangeX;
+            }
             let ny = groundModeToggle.checked ? 0 : Math.floor(Math.random()*rangeY);
             gameState.practiceTarget = {x: nx, y: ny};
             logEvent(`Target at (${nx}, ${ny})`);
@@ -636,16 +678,24 @@
             ctx.moveTo(0, gameState.originY); ctx.lineTo(gameState.width, gameState.originY);
             ctx.stroke();
 
-            // Barrier
-            if(gameState.mode === 'versus') {
-                const barrierX = gameState.originX; 
-                ctx.fillStyle = COLORS.barrier;
-                ctx.fillRect(barrierX - (CONSTANTS.BARRIER_LIMIT * gameState.gridSize), 0, (CONSTANTS.BARRIER_LIMIT * 2 * gameState.gridSize), gameState.height);
-                ctx.strokeStyle = COLORS.barrierLine; ctx.setLineDash([5, 5]); ctx.beginPath();
-                const bx1 = gameState.originX - (CONSTANTS.BARRIER_LIMIT * gameState.gridSize);
-                const bx2 = gameState.originX + (CONSTANTS.BARRIER_LIMIT * gameState.gridSize);
-                ctx.moveTo(bx1, 0); ctx.lineTo(bx1, gameState.height); ctx.moveTo(bx2, 0); ctx.lineTo(bx2, gameState.height);
-                ctx.stroke(); ctx.setLineDash([]);
+            // Barrier (Wall) - Drawn in Versus AND Computer now
+            if(gameState.mode === 'versus' || gameState.mode === 'computer') {
+                const wallW = 2; // -1 to 1 logic width
+                const wallH = CONSTANTS.WALL_HEIGHT;
+                const centerX = gameState.originX;
+                const bottomY = gameState.originY;
+                const topY = bottomY - (wallH * gameState.gridSize);
+                const leftX = centerX - (wallW/2 * gameState.gridSize);
+                const widthPx = wallW * gameState.gridSize;
+                const heightPx = wallH * gameState.gridSize;
+
+                ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fillRect(leftX + 5, topY + 5, widthPx, heightPx);
+                ctx.fillStyle = COLORS.barrier; ctx.fillRect(leftX, topY, widthPx, heightPx);
+                ctx.strokeStyle = COLORS.barrierLine; ctx.lineWidth = 2; ctx.strokeRect(leftX, topY, widthPx, heightPx);
+                ctx.beginPath(); for(let i=0; i<heightPx; i+=20) { ctx.moveTo(leftX, topY + i); ctx.lineTo(leftX + widthPx, topY + i); } ctx.stroke();
+                
+                ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.font = "bold 10px sans-serif"; ctx.textAlign = "center";
+                ctx.fillText("BUNKER", centerX, topY + 15);
             }
 
             drawEntities();
@@ -709,6 +759,24 @@
                 p.cy = p.a * Math.pow(p.cx - p.h, 2) + p.k;
                 p.trail.push({x: p.cx, y: p.cy});
 
+                // Bunker Collision
+                if (gameState.mode !== 'practice') {
+                    if (Math.abs(p.cx) < 1.0 && p.cy < CONSTANTS.WALL_HEIGHT) {
+                        gameState.projectiles.splice(i, 1);
+                        if(gameState.mode === 'practice') {
+                             logEvent("Impact on Bunker Wall.");
+                        } else {
+                             logEvent("Blocked by Bunker.");
+                             if(gameState.mode === 'computer' && p.owner === 1) startTurn(2);
+                             else if(gameState.mode === 'computer' && p.owner === 2) startTurn(1);
+                             else startTurn(p.owner === 1 ? 2 : 1);
+                        }
+                        gameState.isFiring = false;
+                        fireBtn.disabled = false;
+                        continue;
+                    }
+                }
+
                 // Ground Collision
                 if(p.cy < -0.5) { hit(p.cx, 0, p); gameState.projectiles.splice(i, 1); continue; }
                 
@@ -718,11 +786,61 @@
                      const dy = p.cy - gameState.practiceTarget.y;
                      if(Math.sqrt(dx*dx + dy*dy) < 0.8) { hit(p.cx, p.cy, p, true); gameState.projectiles.splice(i, 1); continue; }
                 } else {
-                    // Check collision with opponent
-                    const enemyX = (p.owner === 1) ? gameState.p2.x : gameState.p1.x;
-                    const dx = p.cx - enemyX;
-                    const dy = p.cy - 0;
-                    if(Math.sqrt(dx*dx + dy*dy) < 1.0) { hit(p.cx, 0, p, true); gameState.projectiles.splice(i, 1); continue; }
+                    // Versus / Computer collision
+                    // Check against P1
+                    const d1x = p.cx - gameState.p1.x;
+                    const d1y = p.cy - 0;
+                    if (Math.sqrt(d1x*d1x + d1y*d1y) < 1.0) {
+                        // Hit Player 1
+                        if (p.owner === 1) { // Self Hit
+                            logEvent("FRIENDLY FIRE! -1 Heart/Point");
+                             if(gameState.mode === 'computer') {
+                                 gameState.health--; updateHealthUI();
+                                 if(gameState.health <= 0) endGame("COMPUTER"); else startTurn(2);
+                             } else {
+                                 gameState.p2.score++;
+                                 if(gameState.p2.score >= CONSTANTS.WIN_SCORE) endGame(2); else startTurn(2);
+                             }
+                        } else { // Enemy hit Player 1
+                            if(gameState.mode === 'computer') {
+                                gameState.health--; updateHealthUI();
+                                logEvent("HULL DAMAGE DETECTED!", "error");
+                                if(gameState.health <= 0) endGame("COMPUTER"); else startTurn(1);
+                            } else {
+                                gameState.p2.score++;
+                                if(gameState.p2.score >= CONSTANTS.WIN_SCORE) endGame(2); else startTurn(1);
+                            }
+                        }
+                        gameState.projectiles.splice(i, 1); gameState.craters = []; gameState.isFiring = false; fireBtn.disabled = false; updateStatsUI(); continue;
+                    }
+
+                    // Check against P2
+                    const d2x = p.cx - gameState.p2.x;
+                    const d2y = p.cy - 0;
+                    if (Math.sqrt(d2x*d2x + d2y*d2y) < 1.0) {
+                        // Hit Player 2
+                        if (p.owner === 2) { // AI Self Hit
+                             if(gameState.mode === 'computer') {
+                                 logEvent("Enemy Self-Damage!");
+                                 gameState.aiHealth--; updateHealthUI();
+                                 if(gameState.aiHealth <= 0) endGame(1); else startTurn(1);
+                             } else {
+                                 gameState.p1.score++;
+                                 if(gameState.p1.score >= CONSTANTS.WIN_SCORE) endGame(1); else startTurn(1);
+                             }
+                        } else { // Player 1 hit Player 2
+                            if(gameState.mode === 'computer') {
+                                gameState.aiHealth--; updateHealthUI();
+                                logEvent("Direct Hit on Enemy!", "text-emerald-400");
+                                if(gameState.aiHealth <= 0) endGame(1);
+                                else startTurn(2); // AI Turn after getting hit
+                            } else {
+                                gameState.p1.score++;
+                                if(gameState.p1.score >= CONSTANTS.WIN_SCORE) endGame(1); else startTurn(2);
+                            }
+                        }
+                        gameState.projectiles.splice(i, 1); gameState.craters = []; gameState.isFiring = false; fireBtn.disabled = false; updateStatsUI(); continue;
+                    }
                 }
                 
                 if(Math.abs(p.cx) > 50 || p.cy < -50) gameState.projectiles.splice(i, 1);
@@ -736,42 +854,18 @@
                     gameState.practiceStreak++;
                     logEvent("Target Hit!");
                     spawnPracticeTarget();
-                } else if(gameState.mode === 'versus') {
-                    if(p.owner === 1) gameState.p1.score++; else gameState.p2.score++;
-                    logEvent(`Player ${p.owner} Scored!`);
-                    if(gameState.p1.score >= CONSTANTS.WIN_SCORE || gameState.p2.score >= CONSTANTS.WIN_SCORE) endGame(p.owner);
-                    else startTurn(p.owner === 1 ? 2 : 1);
-                } else if(gameState.mode === 'computer') {
-                    if(p.owner === 1) {
-                        gameState.p1.score++; // Player hit AI
-                        logEvent("Direct Hit on Enemy!");
-                        startTurn(1); // Player gets to go again or reset? Let's reset
-                    } else {
-                        // AI hit Player
-                        gameState.health--;
-                        updateHealthUI();
-                        logEvent("HULL DAMAGE DETECTED!");
-                        if(gameState.health <= 0) endGame("COMPUTER");
-                        else startTurn(1);
-                    }
-                }
+                } 
                 gameState.craters = [];
             } else {
-                // Miss
                 gameState.craters.push({x: x, y: y});
                 if(gameState.mode === 'practice') {
                      gameState.practiceStreak = 0;
                      logEvent(`Miss at (${x.toFixed(1)}, ${y.toFixed(1)})`);
                 } else {
                      logEvent(`Miss.`);
-                     // Switch turn logic
-                     if(gameState.mode === 'computer' && p.owner === 1) {
-                         startTurn(2); // AI Turn
-                     } else if (gameState.mode === 'computer' && p.owner === 2) {
-                         startTurn(1); // AI Missed, Player Turn
-                     } else {
-                         startTurn(p.owner === 1 ? 2 : 1); // Versus swap
-                     }
+                     if(gameState.mode === 'computer' && p.owner === 1) startTurn(2); 
+                     else if (gameState.mode === 'computer' && p.owner === 2) startTurn(1); 
+                     else startTurn(p.owner === 1 ? 2 : 1);
                 }
             }
             gameState.isFiring = false;

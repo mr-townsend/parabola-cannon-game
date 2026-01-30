@@ -272,16 +272,18 @@
 
     <script>
         /**
-         * Parabola Cannon: Outdoor Edition v32
+         * Parabola Cannon: Outdoor Edition v33
          * Features:
-         * - 5 Hearts for 1v1 Duel
-         * - Unified Health System for AI and Versus
-         * - Friendly Fire and Bunker Damage Logic
+         * - Fixes infinite game loop crash (animations cancelled correctly)
+         * - Fixes duplicate event listener stacking
+         * - Unified Hearts for Versus (5 each) and Computer (3 each)
          */
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
+        let animationFrameId; // To control game loop cancellation
+
         // --- ASSETS ---
         const sprites = { blue: new Image(), red: new Image() };
         let spritesLoaded = { blue: false, red: false };
@@ -418,6 +420,9 @@
 
         // --- INIT ---
         function startGame(mode) {
+            // Cancel previous loop to prevent crashing
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
             gameState.mode = mode;
             gameState.gameOver = false;
             
@@ -475,6 +480,8 @@
                 instrList.innerHTML = `<p>1. Destroy the <b>Red Enemy</b>.</p><p>2. Enemy relocates after every turn!</p><p>3. You have <b>3 Hearts</b>.</p><p class="text-red-500 font-bold">WARNING: Center Bunker blocks shots!</p>`;
                 startTurn(1);
             }
+            
+            // Start Loop fresh
             initCanvas();
             updateStatsUI();
         }
@@ -495,15 +502,21 @@
         }
 
         function initCanvas() {
-            window.addEventListener('resize', resize);
+            // Cancel any existing loop to be safe
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            
             resize();
             gameLoop();
             setTimeout(() => inputX.focus(), 100);
             updateUIModes();
         }
 
+        // Move event listener out of init to prevent stacking
+        window.addEventListener('resize', resize);
+
         function resize() {
             const container = canvas.parentElement;
+            if (!container) return;
             const dpr = window.devicePixelRatio || 1;
             canvas.width = container.clientWidth * dpr;
             canvas.height = container.clientHeight * dpr;
@@ -955,7 +968,11 @@
             });
         }
 
-        function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
+        function gameLoop() {
+            update();
+            draw();
+            animationFrameId = requestAnimationFrame(gameLoop); // Assign ID
+        }
 
         fireBtn.addEventListener('click', fire);
         settingsBtn.addEventListener('click', (e) => {

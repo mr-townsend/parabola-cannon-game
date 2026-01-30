@@ -180,7 +180,7 @@
                          <label class="text-[8px] text-emerald-400 absolute -top-3 left-1">a</label>
                          <div class="flex items-center input-glow bg-slate-900 rounded-lg border-2 border-slate-600 overflow-hidden">
                             <button class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 text-sm border-r border-slate-600" onclick="stepInput('inputA', -0.05)">-</button>
-                            <input type="number" id="inputA" placeholder="-0.1" class="w-14 bg-transparent text-center text-sm font-bold text-white placeholder-slate-600 appearance-none border-none outline-none">
+                            <input type="number" id="inputA" placeholder="0" class="w-14 bg-transparent text-center text-sm font-bold text-white placeholder-slate-600 appearance-none border-none outline-none">
                             <button class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 text-sm border-l border-slate-600" onclick="stepInput('inputA', 0.05)">+</button>
                          </div>
                     </div>
@@ -225,6 +225,11 @@
                     <label class="flex items-center justify-between cursor-pointer gap-3 group bg-slate-700/50 p-2 rounded-lg" title="Manipulate the equation directly">
                         <span class="text-xs font-bold text-slate-200 uppercase group-hover:text-emerald-400 transition-colors">Formula Mode</span>
                         <input type="checkbox" id="formulaModeToggle" class="w-5 h-5 accent-emerald-500 rounded cursor-pointer toggle-checkbox bg-slate-700 border-slate-500">
+                    </label>
+
+                    <label class="flex items-center justify-between cursor-pointer gap-3 group bg-slate-700/50 p-2 rounded-lg" title="Enable Rainbow Trails">
+                        <span class="text-xs font-bold text-slate-200 uppercase group-hover:text-purple-400 transition-colors">Rainbow Trail</span>
+                        <input type="checkbox" id="rainbowModeToggle" class="w-5 h-5 accent-purple-500 rounded cursor-pointer toggle-checkbox bg-slate-700 border-slate-500">
                     </label>
 
                     <div id="standardSettings" class="flex flex-col gap-4">
@@ -272,11 +277,11 @@
 
     <script>
         /**
-         * Parabola Cannon: Outdoor Edition v35
+         * Parabola Cannon: Outdoor Edition v40
          * Features:
-         * - Fixes infinite game loop crash via cancelAnimationFrame
-         * - Replaces hard reload with soft reset (exitToMenu)
-         * - Single Resize Listener
+         * - Screen Shake on Hit
+         * - Fading Trail Tail
+         * - Rainbow Splash Effect
          */
 
         const canvas = document.getElementById('gameCanvas');
@@ -361,6 +366,7 @@
         const inputModeToggle = document.getElementById('inputModeToggle');
         const showCoordsToggle = document.getElementById('showCoordsToggle');
         const formulaModeToggle = document.getElementById('formulaModeToggle');
+        const rainbowModeToggle = document.getElementById('rainbowModeToggle');
         
         const gameOverScreen = document.getElementById('gameOverScreen');
         const winCard = document.getElementById('winCard');
@@ -380,9 +386,11 @@
             practiceStreak: 0,
             projectiles: [],
             craters: [], 
+            glitter: [],
             isFiring: false,
             cannonX: 0,
-            gameOver: false
+            gameOver: false,
+            shake: 0 // Shake Intensity
         };
 
         const CONSTANTS = { BARRIER_LIMIT: 4, WIN_SCORE: 5, VERSUS_HEARTS: 5, AI_HEARTS: 3 }; 
@@ -392,18 +400,60 @@
             player1: '#3b82f6', player2: '#ef4444', projectile: '#fbbf24', barrier: '#475569', barrierLine: '#1e293b'
         };
 
-        // --- INPUT STEPPER ---
+        // --- INPUT LOGIC ---
+
+        function getBounds() {
+            const xMax = Math.floor((gameState.width - gameState.originX) / gameState.gridSize) - 1;
+            const xMin = -Math.floor(gameState.originX / gameState.gridSize) + 1;
+            const yMax = Math.floor(gameState.originY / gameState.gridSize) - 1;
+            const yMin = -2; 
+            return { xMin, xMax, yMin, yMax };
+        }
+
+        function clampInput(id, val) {
+            const bounds = getBounds();
+            let clamped = val;
+
+            if (id === 'inputCannonX') {
+                clamped = Math.max(bounds.xMin, Math.min(bounds.xMax, val));
+                if (gameState.mode === 'versus' || gameState.mode === 'computer') {
+                    const limit = CONSTANTS.BARRIER_LIMIT;
+                    if (gameState.turn === 1) {
+                         if (clamped > -limit) clamped = -limit;
+                    } else if (gameState.turn === 2 && gameState.mode === 'versus') {
+                         if (clamped < limit) clamped = limit;
+                    }
+                }
+            } else if (id === 'inputX' || id === 'inputH') {
+                clamped = Math.max(bounds.xMin, Math.min(bounds.xMax, val));
+            } else if (id === 'inputY' || id === 'inputK') {
+                clamped = Math.max(bounds.yMin, Math.min(bounds.yMax, val));
+            }
+            return clamped;
+        }
+
         window.stepInput = function(id, step) {
             const input = document.getElementById(id);
             if(input.disabled) return;
             let val = parseFloat(input.value) || 0;
             val += step;
             if (step % 1 !== 0) val = Math.round(val * 10) / 10;
+            val = clampInput(id, val);
             input.value = val;
             input.dispatchEvent(new Event('input'));
         };
 
-        // --- GLOBAL KEY CONTROLS ---
+        function addClampListener(id) {
+            const el = document.getElementById(id);
+            el.addEventListener('change', (e) => {
+                let val = parseFloat(e.target.value);
+                if (isNaN(val)) return;
+                const clamped = clampInput(id, val);
+                if (val !== clamped) { e.target.value = clamped; }
+            });
+        }
+        ['inputCannonX', 'inputX', 'inputY', 'inputH', 'inputK'].forEach(addClampListener);
+
         window.addEventListener('keydown', (e) => { 
             if (e.key === 'Enter') {
                 fire();
@@ -422,15 +472,15 @@
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             if (aiTimeout) clearTimeout(aiTimeout);
 
-            // Clean Slate
             gameState.projectiles = [];
             gameState.craters = [];
+            gameState.glitter = [];
+            gameState.shake = 0;
             gameState.isFiring = false;
 
             gameState.mode = mode;
             gameState.gameOver = false;
             
-            // Randomize Wall Height (1-7)
             gameState.wallHeight = Math.floor(Math.random() * 7) + 1;
 
             document.getElementById('modeSelectScreen').style.display = 'none';
@@ -439,7 +489,6 @@
             healthWrapper.classList.add('hidden');
             turnIndicator.classList.add('hidden');
             
-            // Allow controls initially
             cannonControlGroup.classList.remove('disabled-control');
             inputCannonX.disabled = false;
 
@@ -496,13 +545,8 @@
         function exitToMenu() {
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             if (aiTimeout) clearTimeout(aiTimeout);
-            
-            // Clean
-            gameState.projectiles = [];
-            gameState.craters = [];
+            gameState.projectiles = []; gameState.craters = []; gameState.glitter = [];
             gameState.isFiring = false;
-            
-            // UI Reset
             document.getElementById('instructions').classList.add('hidden');
             document.getElementById('gameOverScreen').classList.add('hidden');
             document.getElementById('modeSelectScreen').style.display = 'flex';
@@ -512,15 +556,13 @@
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             gameState.p1.score = 0; gameState.p2.score = 0;
             gameState.practiceScore = 0; gameState.practiceStreak = 0;
-            gameState.craters = [];
-            gameState.projectiles = [];
+            gameState.craters = []; gameState.projectiles = []; gameState.glitter = [];
             gameState.gameOver = false;
             gameOverScreen.classList.add('hidden');
             startGame(gameState.mode);
         }
 
         function initCanvas() {
-            // Cancel loop just in case
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             resize();
             gameLoop();
@@ -528,7 +570,6 @@
             updateUIModes();
         }
 
-        // Single Listener
         window.addEventListener('resize', resize);
 
         function resize() {
@@ -553,7 +594,6 @@
             gameState.turn = playerNum;
             const isP1 = playerNum === 1;
             
-            // UI
             if (gameState.mode !== 'practice') {
                 turnIndicator.classList.remove('hidden');
                 turnIndicator.className = `glass-panel px-4 py-2 rounded-xl shadow-lg border-l-4 transition-colors ${isP1 ? 'border-blue-500' : 'border-red-500'}`;
@@ -562,7 +602,6 @@
                 controlPanel.className = `h-32 border-t flex items-center justify-between px-6 z-20 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.3)] shrink-0 transition-colors duration-500 ${isP1 ? 'bg-slate-800 border-slate-700' : 'bg-red-900/20 border-red-900/50'}`;
             }
 
-            // DYNAMIC LOCKING
             const shouldLock = (gameState.mode === 'computer' && !isP1);
             if (shouldLock) {
                 cannonControlGroup.classList.add('disabled-control');
@@ -572,16 +611,20 @@
                 inputCannonX.disabled = false;
             }
 
-            // Controls
+            // RESET INPUTS FOR NEW TURN
+            inputX.value = ''; 
+            inputY.value = ''; 
+            inputA.value = ''; 
+            inputH.value = ''; 
+            inputK.value = '';
+
+            inputCannonX.value = isP1 ? gameState.p1.x : gameState.p2.x;
+
             if (isP1) {
-                inputCannonX.value = gameState.p1.x; // Sync Value
-                inputX.value = ''; inputY.value = ''; inputA.value = ''; inputH.value = ''; inputK.value = '';
                 fireBtn.disabled = false;
                 fireBtn.innerText = "FIRE";
                 logEvent(`Round Start: Player 1`, 'info');
             } else {
-                inputCannonX.value = gameState.p2.x; // Sync Value
-                
                 if (gameState.mode === 'computer') {
                     fireBtn.disabled = true;
                     fireBtn.innerText = "AI TARGETING...";
@@ -607,10 +650,9 @@
             gameState.p2.x = newX;
             logEvent(`Enemy relocated to X=${newX}`, "warning");
 
-            // AI Math
             const p1 = gameState.p1.x;
             const p2 = gameState.p2.x; 
-            const variance = (Math.random() - 0.5) * 12; // Variance
+            const variance = (Math.random() - 0.5) * 12; 
             const targetX = p1 + variance;
             const startX = p2;
             
@@ -642,24 +684,22 @@
         }
 
         function updateHealthUI() {
-            // Player 1
             const maxP1 = gameState.mode === 'computer' ? CONSTANTS.AI_HEARTS : CONSTANTS.VERSUS_HEARTS;
             heartsContainer.innerHTML = '';
             for(let i=0; i<maxP1; i++) {
                 const s = document.createElement('span');
                 s.className = 'heart-icon ' + (i >= gameState.p1.health ? 'heart-lost' : '');
-                s.style.color = i >= gameState.p1.health ? '' : '#3b82f6'; // Blue hearts for P1
+                s.style.color = i >= gameState.p1.health ? '' : '#3b82f6'; 
                 s.innerText = '♥';
                 heartsContainer.appendChild(s);
             }
             
-            // Player 2 / Enemy
             const maxP2 = gameState.mode === 'computer' ? CONSTANTS.AI_HEARTS : CONSTANTS.VERSUS_HEARTS;
             enemyHeartsContainer.innerHTML = '';
             for(let i=0; i<maxP2; i++) {
                 const s = document.createElement('span');
                 s.className = 'heart-icon ' + (i >= gameState.p2.health ? 'heart-lost' : '');
-                s.style.color = i >= gameState.p2.health ? '' : (gameState.mode === 'computer' ? '#d97706' : '#ef4444'); // Amber or Red
+                s.style.color = i >= gameState.p2.health ? '' : (gameState.mode === 'computer' ? '#d97706' : '#ef4444');
                 s.innerText = '♥';
                 enemyHeartsContainer.appendChild(s);
             }
@@ -674,7 +714,6 @@
             logContainer.prepend(div);
         }
 
-        // --- MATH HELPERS ---
         function toScreen(x, y) {
             return {
                 x: gameState.originX + (x * gameState.gridSize),
@@ -686,7 +725,6 @@
             const rangeX = Math.floor((gameState.width/2)/gameState.gridSize) - 2;
             const rangeY = Math.floor((gameState.originY)/gameState.gridSize) - 3;
             let nx = Math.floor(Math.random()*rangeX*2) - rangeX;
-            // Prevent spawning inside wall
             while(Math.abs(nx) <= 2) {
                  nx = Math.floor(Math.random()*rangeX*2) - rangeX;
             }
@@ -704,20 +742,27 @@
                 formulaControls.classList.add('hidden'); formulaControls.classList.remove('flex');
             }
             if (inputModeToggle.checked) {
-                labelY.innerText = "Peak Height (k)"; inputY.placeholder = "Peak";
+                labelY.innerText = "Peak Height (k)"; inputY.placeholder = "0";
             } else {
-                labelY.innerText = "Target Y"; inputY.placeholder = "End Y";
+                labelY.innerText = "Target Y"; inputY.placeholder = "0";
             }
         }
 
-        // --- GAME LOOP ---
         function draw() {
+            ctx.save();
+            if(gameState.shake > 0) {
+                const magnitude = gameState.shake;
+                const dx = (Math.random() - 0.5) * magnitude;
+                const dy = (Math.random() - 0.5) * magnitude;
+                ctx.translate(dx, dy);
+            }
+
             const grad = ctx.createLinearGradient(0, 0, 0, gameState.height);
             grad.addColorStop(0, COLORS.skyTop); grad.addColorStop(0.7, COLORS.skyBottom);
             grad.addColorStop(0.7, COLORS.ground); grad.addColorStop(1, COLORS.groundDark);
-            ctx.fillStyle = grad; ctx.fillRect(0, 0, gameState.width, gameState.height);
+            ctx.fillStyle = grad; 
+            ctx.fillRect(-20, -20, gameState.width+40, gameState.height+40);
 
-            // Grid
             ctx.beginPath(); ctx.strokeStyle = COLORS.grid; ctx.lineWidth = 1;
             const xSteps = Math.ceil(gameState.width / gameState.gridSize / 2);
             for(let i = -xSteps; i <= xSteps; i++) {
@@ -738,10 +783,9 @@
             ctx.moveTo(0, gameState.originY); ctx.lineTo(gameState.width, gameState.originY);
             ctx.stroke();
 
-            // Barrier (Wall) - Drawn in Versus AND Computer now
             if(gameState.mode === 'versus' || gameState.mode === 'computer') {
-                const wallW = 2; // -1 to 1 logic width
-                const wallH = gameState.wallHeight; // Use Dynamic Height
+                const wallW = 2;
+                const wallH = gameState.wallHeight;
                 const centerX = gameState.originX;
                 const bottomY = gameState.originY;
                 const topY = bottomY - (wallH * gameState.gridSize);
@@ -758,13 +802,15 @@
                 ctx.fillText(`BUNKER`, centerX, topY + 15);
             }
 
+            drawGlitter();
             drawEntities();
             drawProjectiles();
+
+            ctx.restore();
         }
 
         function drawEntities() {
             const scale = gameState.gridSize / 32; 
-            // Cannons
             if(gameState.mode !== 'practice') {
                 if(spritesLoaded.blue) {
                     const pos = toScreen(gameState.p1.x, 0);
@@ -791,7 +837,6 @@
                 }
             }
 
-            // Craters
             gameState.craters.forEach(c => {
                 const p = toScreen(c.x, c.y);
                 ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 10, 3, 0, 0, Math.PI*2); ctx.fill();
@@ -802,36 +847,135 @@
         function drawProjectiles() {
             gameState.projectiles.forEach(p => {
                 const pos = toScreen(p.cx, p.cy);
-                // Draw thick glow for visibility
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = COLORS.projectile;
+                ctx.shadowBlur = 10; ctx.shadowColor = COLORS.projectile;
                 ctx.fillStyle = COLORS.projectile;
                 ctx.beginPath(); ctx.arc(pos.x, pos.y, 6, 0, Math.PI*2); ctx.fill();
-                ctx.shadowBlur = 0; // Reset
+                ctx.shadowBlur = 0; 
 
                 if (p.trail && p.trail.length > 0) {
-                    ctx.beginPath(); ctx.strokeStyle = p.owner === 2 ? '#ef4444' : 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3;
-                    p.trail.forEach((pt, i) => { const s = toScreen(pt.x, pt.y); if(i===0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y); });
-                    ctx.stroke();
+                    if (rainbowModeToggle.checked) {
+                        for (let j = 0; j < p.trail.length - 1; j++) {
+                            ctx.beginPath();
+                            const hue = (j * 10 + Date.now() / 5) % 360;
+                            const opacity = (j / p.trail.length).toFixed(2);
+                            
+                            ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${opacity})`;
+                            ctx.lineWidth = 4;
+                            const s1 = toScreen(p.trail[j].x, p.trail[j].y);
+                            const s2 = toScreen(p.trail[j+1].x, p.trail[j+1].y);
+                            ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y);
+                            ctx.stroke();
+                        }
+                    } else {
+                        for (let j = 0; j < p.trail.length - 1; j++) {
+                             ctx.beginPath();
+                             const opacity = (j / p.trail.length).toFixed(2);
+                             const strokeStyle = p.owner === 2 
+                                ? `rgba(239, 68, 68, ${opacity})`
+                                : `rgba(255, 255, 255, ${opacity * 0.5})`; 
+
+                             ctx.strokeStyle = strokeStyle;
+                             ctx.lineWidth = 3;
+                             const s1 = toScreen(p.trail[j].x, p.trail[j].y);
+                             const s2 = toScreen(p.trail[j+1].x, p.trail[j+1].y);
+                             ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y);
+                             ctx.stroke();
+                        }
+                    }
                 }
             });
         }
 
+        function createSplash(x, y) {
+            const count = 20;
+            for(let i=0; i<count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 0.4 + 0.1;
+                
+                let color;
+                if(rainbowModeToggle.checked) {
+                    color = `hsl(${Math.random() * 360}, 100%, 60%)`;
+                } else {
+                    const r = Math.floor(Math.random() * 55 + 200); 
+                    const g = Math.floor(Math.random() * 150);      
+                    const b = 0;
+                    color = `rgb(${r}, ${g}, ${b})`;
+                }
+
+                gameState.glitter.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed, 
+                    color: color,
+                    life: 1.0,
+                    type: 'splash'
+                });
+            }
+        }
+
+        function drawGlitter() {
+            gameState.glitter.forEach(g => {
+                const pos = toScreen(g.x, g.y);
+                ctx.fillStyle = g.color;
+                ctx.globalAlpha = g.life;
+                ctx.fillRect(pos.x, pos.y, 4, 4);
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
         function update() {
+            // Shake decay
+            if(gameState.shake > 0) {
+                gameState.shake *= 0.9;
+                if(gameState.shake < 0.5) gameState.shake = 0;
+            }
+
+            for (let i = gameState.glitter.length - 1; i >= 0; i--) {
+                let g = gameState.glitter[i];
+                
+                if (g.type === 'splash') {
+                    g.x += g.vx;
+                    g.y += g.vy; 
+                    g.vy -= 0.02; 
+                    g.vx *= 0.95; 
+                    g.life -= 0.03;
+                } else {
+                    g.y -= 0.15; 
+                    g.x += g.vx;
+                    g.life -= 0.02;
+                }
+
+                if (g.life <= 0 || g.y < -2) gameState.glitter.splice(i, 1);
+            }
+
             for(let i=gameState.projectiles.length-1; i>=0; i--) {
                 let p = gameState.projectiles[i];
-                // Fusing: Increment Frame Count
                 if (p.frame === undefined) p.frame = 0;
                 p.frame++;
 
                 p.cx += p.vx;
                 p.cy = p.a * Math.pow(p.cx - p.h, 2) + p.k;
                 p.trail.push({x: p.cx, y: p.cy});
+                
+                if (p.trail.length > 40) p.trail.shift();
 
-                // Bunker Collision - DESTROYS PROJECTILE
+                if (rainbowModeToggle.checked) {
+                    gameState.glitter.push({
+                        x: p.cx + (Math.random()-0.5)*0.5, 
+                        y: p.cy,
+                        vx: (Math.random() - 0.5) * 0.1,
+                        color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+                        life: 1.0,
+                        type: 'trail'
+                    });
+                }
+
                 if (gameState.mode !== 'practice') {
-                    if (Math.abs(p.cx) < 1.5 && p.cy < gameState.wallHeight) { // Check against Dynamic Height
+                    if (Math.abs(p.cx) < 1.5 && p.cy < gameState.wallHeight) { 
                         gameState.projectiles.splice(i, 1);
+                        createSplash(p.cx, p.cy); 
+                        gameState.shake = 10;
                         if(gameState.mode === 'practice') {
                              logEvent("Impact on Bunker Wall.");
                         } else {
@@ -846,52 +990,61 @@
                     }
                 }
 
-                // Ground Collision
-                if(p.cy < -0.5) { hit(p.cx, 0, p); gameState.projectiles.splice(i, 1); continue; }
+                if(p.cy < -0.5) { 
+                    hit(p.cx, 0, p); 
+                    createSplash(p.cx, 0); 
+                    gameState.projectiles.splice(i, 1); 
+                    continue; 
+                }
                 
-                // Entity Collision - SAFE FUSING ADDED (Wait 30 frames before checking hits)
                 if (p.frame > 30) {
                     if(gameState.mode === 'practice') {
                          const dx = p.cx - gameState.practiceTarget.x;
                          const dy = p.cy - gameState.practiceTarget.y;
-                         if(Math.sqrt(dx*dx + dy*dy) < 0.8) { hit(p.cx, p.cy, p, true); gameState.projectiles.splice(i, 1); continue; }
+                         if(Math.sqrt(dx*dx + dy*dy) < 0.8) { 
+                             createSplash(p.cx, p.cy);
+                             hit(p.cx, p.cy, p, true); 
+                             gameState.projectiles.splice(i, 1); 
+                             continue; 
+                         }
                     } else {
-                        // Versus / Computer collision
-                        // Check against P1
                         const d1x = p.cx - gameState.p1.x;
                         const d1y = p.cy - 0;
                         if (Math.sqrt(d1x*d1x + d1y*d1y) < 1.0) {
-                            // Hit Player 1
-                            if (p.owner === 1) { // Self Hit
+                            createSplash(p.cx, p.cy);
+                            if (p.owner === 1) { 
                                 logEvent("FRIENDLY FIRE! -1 Heart");
                                 gameState.p1.health--; updateHealthUI();
-                                if(gameState.p1.health <= 0) endGame(2); // P2/AI wins
+                                gameState.shake = 20;
+                                if(gameState.p1.health <= 0) endGame(2); 
                                 else if(gameState.mode === 'computer') startTurn(2); 
                                 else startTurn(2);
-                            } else { // Enemy hit Player 1
+                            } else { 
                                 gameState.p1.health--; updateHealthUI();
                                 logEvent("PLAYER 1 HIT!", "error");
-                                if(gameState.p1.health <= 0) endGame(2); // P2 wins
-                                else if(gameState.mode === 'computer') startTurn(1); // Player's turn
+                                gameState.shake = 20;
+                                if(gameState.p1.health <= 0) endGame(2); 
+                                else if(gameState.mode === 'computer') startTurn(1); 
                                 else startTurn(1);
                             }
                             gameState.projectiles.splice(i, 1); gameState.craters = []; gameState.isFiring = false; fireBtn.disabled = false; updateStatsUI(); continue;
                         }
 
-                        // Check against P2
                         const d2x = p.cx - gameState.p2.x;
                         const d2y = p.cy - 0;
                         if (Math.sqrt(d2x*d2x + d2y*d2y) < 1.0) {
-                            // Hit Player 2
-                            if (p.owner === 2) { // P2 Self Hit
+                            createSplash(p.cx, p.cy);
+                            if (p.owner === 2) { 
                                  logEvent("P2 SELF DAMAGE! -1 Heart");
                                  gameState.p2.health--; updateHealthUI();
+                                 gameState.shake = 20;
                                  if(gameState.p2.health <= 0) endGame(1); else startTurn(1);
-                            } else { // Player 1 hit Player 2
+                            } else { 
                                 gameState.p2.health--; updateHealthUI();
                                 logEvent("PLAYER 2 HIT!", "text-emerald-400");
+                                gameState.shake = 20;
                                 if(gameState.p2.health <= 0) endGame(1);
-                                else if(gameState.mode === 'computer') startTurn(2); // AI retaliation
+                                else if(gameState.mode === 'computer') startTurn(2); 
                                 else startTurn(2);
                             }
                             gameState.projectiles.splice(i, 1); gameState.craters = []; gameState.isFiring = false; fireBtn.disabled = false; updateStatsUI(); continue;
@@ -905,6 +1058,7 @@
 
         function hit(x, y, p, directHit = false) {
             if(directHit) {
+                gameState.shake = 20;
                 if(gameState.mode === 'practice') {
                     gameState.practiceScore += 100 + (gameState.practiceStreak*10);
                     gameState.practiceStreak++;
@@ -913,7 +1067,6 @@
                 } 
                 gameState.craters = [];
             } else {
-                // Miss
                 gameState.craters.push({x: x, y: y});
                 if(gameState.mode === 'practice') {
                      gameState.practiceStreak = 0;
@@ -947,7 +1100,6 @@
             if(gameState.isFiring) return;
             
             let a, h, k;
-            // FIX: Always rely on valid input value, ensuring correct startX
             const startX = parseFloat(inputCannonX.value);
             
             if(formulaModeToggle.checked) {
@@ -984,7 +1136,7 @@
         function gameLoop() {
             update();
             draw();
-            animationFrameId = requestAnimationFrame(gameLoop); // Assign ID
+            animationFrameId = requestAnimationFrame(gameLoop); 
         }
 
         fireBtn.addEventListener('click', fire);
@@ -1002,12 +1154,10 @@
              if(gameState.mode === 'versus' || gameState.mode === 'computer') {
                  const v = parseFloat(e.target.value);
                  const limit = CONSTANTS.BARRIER_LIMIT;
-                 // P1 Constraints (Applies to both Versus and Computer)
                  if(gameState.turn === 1) {
                      if(v > -limit) e.target.value = -limit;
                      gameState.p1.x = parseFloat(e.target.value);
                  }
-                 // P2 Constraints (Versus only, AI moves itself)
                  else if (gameState.turn === 2 && gameState.mode === 'versus') {
                      if(v < limit) e.target.value = limit;
                      gameState.p2.x = parseFloat(e.target.value);
